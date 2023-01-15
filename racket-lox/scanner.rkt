@@ -84,10 +84,10 @@
       ((#\<) (match sp #\= 'LESS_EQUAL 'LESS line col pos))
       ((#\>) (match sp #\= 'GREATER_EQUAL 'GREATER line col pos))
       ((#\/) (if (eqv? (peek-char sp) #\/) (comment sp) (make-token 'SLASH line col pos)))
-      ((#\newline) (get-token line col pos))
-      ((#\tab) (get-token line col pos))
-      ((#\return) (get-token line col pos))
-      ((#\space) (get-token line col pos))
+      ((#\newline) (get-token sp))
+      ((#\tab) (get-token sp))
+      ((#\return) (get-token sp))
+      ((#\space) (get-token sp))
       ((#\") (get-string sp line col pos '()))
       (else (cond
             ((eof-object? c) (make-token 'EOF line col pos))
@@ -101,3 +101,5 @@
 
 (define (get-tokens sp)
     (get-tokens-impl sp '()))
+
+;(trace get-token get-tokens-impl)

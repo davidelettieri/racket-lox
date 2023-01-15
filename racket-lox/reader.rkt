@@ -1,5 +1,6 @@
 #lang racket
 
+(require racket/trace)
 (require "scanner.rkt")
 
 (require syntax/readerr)
@@ -17,7 +18,6 @@
   (regexp-match #px"^\\s*" in))
 
 (define (read-lox src in)
-  (display in)
   (define tokens (get-tokens in)) 
   (parse-expr tokens))
 
