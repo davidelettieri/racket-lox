@@ -3,35 +3,35 @@
 
 (define keywords
   (hash
-   "and" 'AND
-   "class" 'CLASS
-   "else" 'ELSE
-   "false" 'FALSE
-   "for" 'FOR
-   "fun" 'FUN
-   "if" 'IF
-   "nil" 'NIL
-   "or" 'OR
-   "print" 'PRINT
-   "return" 'RETURN
-   "super" 'SUPER
-   "this" 'THIS
-   "true" 'TRUE
-   "var" 'VAR
-   "while" 'WHILE))
+   "and" '(AND . 3)
+   "class" '(CLASS . 5)
+   "else" '(ELSE . 4)
+   "false" '(FALSE . 5)
+   "for" '(FOR . 3)
+   "fun" '(FUN . 3)
+   "if" '(IF . 2)
+   "nil" '(NIL . 3)
+   "or" '(OR . 2)
+   "print" '(PRINT . 5)
+   "return" '(RETURN . 6)
+   "super" '(SUPER . 5)
+   "this" '(THIS . 4)
+   "true" '(TRUE . 4)
+   "var" '(VAR . 3)
+   "while" '(WHILE . 5)))
 
-(provide get-tokens token)
+(provide get-token get-tokens token)
 
-(struct token (type line column pos value) #:transparent)
-(define (make-token type line col pos [value #f])
-   (token type line col pos value))
+(struct token (type line column pos span value) #:transparent)
+(define (make-token type line col pos span [value #f])
+   (token type line col pos span value))
 
-(define (match sp ch type-1 type-2 line col pos)
+(define (match sp ch type-1 type-2 line col pos span)
     (if (eqv? (peek-char sp) ch)
         (begin
           (read-char sp)
-          (make-token type-1 sp line col pos))
-        (make-token type-2 sp line col pos)))
+          (make-token type-1 sp line col pos span))
+        (make-token type-2 sp line col pos span)))
 
 (define (comment sp)
   (begin
@@ -42,7 +42,10 @@
   (let ((next-c (peek-char sp)))
         (cond
           ((eof-object? next-c) (raise 'unterminated-string))
-          ((eqv? next-c #\") (begin (read-char sp) (make-token 'STRING line col pos (list->string (reverse source)))))
+          ((eqv? next-c #\") (begin
+                               (read-char sp)
+                               (define lexeme (list->string (reverse source)))
+                               (make-token 'STRING line col pos (string-length lexeme) lexeme)))
           (else (begin (read-char sp) (get-string sp line col pos (cons next-c source)))))))
 
 (define (get-number sp line col pos source)
@@ -61,43 +64,43 @@
         (let* ((text (list->string (reverse source)))
                (kw (hash-ref keywords text #f)))
           (if kw
-              (make-token kw line col pos)
-              (make-token 'IDENTIFIER line col pos text))))))
+              (make-token (car kw) line col pos (cdr kw))
+              (make-token 'IDENTIFIER line col pos (string-length text) text))))))
       
 (define (get-token sp)
   (begin
     (define-values (line col pos) (port-next-location sp))
     (define c (read-char sp))
     (case c
-      ((#\() (make-token 'LEFT_PAREN line col pos))
-      ((#\)) (make-token 'RIGHT_PAREN line col pos))
-      ((#\{) (make-token 'LEFT_BRACE line col pos))
-      ((#\}) (make-token 'RIGHT_BRACE line col pos))
-      ((#\,) (make-token 'COMMA line col pos))
-      ((#\.) (make-token 'DOT line col pos))
-      ((#\-) (make-token 'MINUS line col pos))
-      ((#\+) (make-token 'PLUS line col pos))
-      ((#\;) (make-token 'SEMICOLON line col pos))
-      ((#\*) (make-token 'STAR line col pos))
-      ((#\!) (match sp #\= 'BANG_EQUAL 'BANG line col pos))
-      ((#\=) (match sp #\= 'EQUAL_EQUAL 'EQUAL line col pos))
-      ((#\<) (match sp #\= 'LESS_EQUAL 'LESS line col pos))
-      ((#\>) (match sp #\= 'GREATER_EQUAL 'GREATER line col pos))
-      ((#\/) (if (eqv? (peek-char sp) #\/) (comment sp) (make-token 'SLASH line col pos)))
+      ((#\() (make-token 'LEFT_PAREN line col pos 1))
+      ((#\)) (make-token 'RIGHT_PAREN line col pos 1))
+      ((#\{) (make-token 'LEFT_BRACE line col pos 1))
+      ((#\}) (make-token 'RIGHT_BRACE line col pos 1))
+      ((#\,) (make-token 'COMMA line col pos 1))
+      ((#\.) (make-token 'DOT line col pos 1))
+      ((#\-) (make-token 'MINUS line col pos 1))
+      ((#\+) (make-token 'PLUS line col pos 1))
+      ((#\;) (make-token 'SEMICOLON line col pos 1))
+      ((#\*) (make-token 'STAR line col pos 1))
+      ((#\!) (match sp #\= 'BANG_EQUAL 'BANG line col pos 2))
+      ((#\=) (match sp #\= 'EQUAL_EQUAL 'EQUAL line col pos 2))
+      ((#\<) (match sp #\= 'LESS_EQUAL 'LESS line col pos 2))
+      ((#\>) (match sp #\= 'GREATER_EQUAL 'GREATER line col pos 2))
+      ((#\/) (if (eqv? (peek-char sp) #\/) (comment sp) (make-token 'SLASH line col pos 1)))
       ((#\newline) (get-token sp))
       ((#\tab) (get-token sp))
       ((#\return) (get-token sp))
       ((#\space) (get-token sp))
       ((#\") (get-string sp line col pos '()))
       (else (cond
-            ((eof-object? c) (make-token 'EOF line col pos))
+            ((eof-object? c) c)
             ((char-numeric? c) (get-number sp line col pos (list c)))
             ((char-alphabetic? c) (get-identifier sp line col pos (list c)))
             (else raise 'unexpected-character))))))
 
 (define (get-tokens-impl s tokens)
   (let* ((t (get-token s)) (next-s (cons t tokens)))
-    (if (eqv? (token-type t) 'EOF) (reverse next-s) (get-tokens-impl s next-s))))
+    (if (eof-object? t) (reverse next-s) (get-tokens-impl s next-s))))
 
 (define (get-tokens sp)
     (get-tokens-impl sp '()))

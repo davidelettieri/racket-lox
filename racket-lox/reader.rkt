@@ -18,8 +18,11 @@
   (regexp-match #px"^\\s*" in))
 
 (define (read-lox src in)
-  (define tokens (get-tokens in)) 
-  (parse-expr tokens))
+  (port-count-lines! in)
+  (define token (get-token in)) 
+  (if (eof-object? token) 
+      token
+      (datum->syntax #f 1)))
 
 (define (parse-expr in)
   (parse-equality in))

@@ -1,3 +1,7 @@
+**/*.dep
+**/*.zo
+**/compiled/*
+
 *.ss~
 *.ss#*
 .#*.ss
