@@ -1,5 +1,4 @@
 #lang racket
-(require racket/trace)
 
 (define keywords
   (hash
