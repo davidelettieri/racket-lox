@@ -63,6 +63,6 @@
    ; the return-without-pos call is needed to avoid a "double" wrapping into a position token
    ; ref. https://github.com/racket/parser-tools/blob/b08f6137a3c067720c4b4723dd726652af288e97/parser-tools-lib/parser-tools/yacc.rkt#L247
    [whitespace (return-without-pos (lox-lexer input-port))]
-   [(concatenation alphabetic (repetition 1 +inf.0 (union alphabetic numeric))) (token-IDENTIFIER lexeme)]))
+   [(concatenation alphabetic (repetition 0 +inf.0 (union alphabetic numeric))) (token-IDENTIFIER lexeme)]))
 
 (provide lox-lexer basic-tokens punct-tokens)
