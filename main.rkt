@@ -11,7 +11,7 @@
      (my-read-syntax #f in)))
  
   (define (my-read-syntax src in)
-    (with-syntax ([result (the-parser (lambda () (lox-lexer in)))])
+    (with-syntax ([result (lox-parser (lambda () (lox-lexer in)))])
       (strip-context
        #'(module anything racket
            (require "semantics.rkt")
