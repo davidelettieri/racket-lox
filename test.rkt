@@ -9,7 +9,7 @@
 
   (define (parse-string s)
     (let ([in (open-input-string s)])
-      (the-parser (lambda () (lox-lexer in)))))
+      (lox-parser (lambda () (lox-lexer in)))))
 
   (test-case
    "Tokens are recognized correctly"
