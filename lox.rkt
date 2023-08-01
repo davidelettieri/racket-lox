@@ -2,7 +2,8 @@
 
 (require parser-tools/lex
          racket/match
-         "lexer.rkt")
+         "lexer.rkt"
+         "pretty-print.rkt")
 
 (define (print-token pt)
   (define t (position-token-token pt))
@@ -13,10 +14,11 @@
   (define (get-token) (lox-lexer in))
   (define (print-tokens)
     (define t (get-token))
-    (unless (eqv? 'EOF (position-token-token t))
+    (if (not (eqv? 'EOF (position-token-token t)))
       (begin
-        (print-token t)
-        (print-tokens))))
+        (pretty-print t)
+        (print-tokens))
+      (pretty-print t)))
   (print-tokens))
 
 (define (run-file file-path)

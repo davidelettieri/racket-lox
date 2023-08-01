@@ -2,7 +2,7 @@
 
 (require parser-tools/lex)
 
-(define-tokens basic-tokens (NUM STRING IDENTIFIER))
+(define-tokens basic-tokens (NUMBER STRING IDENTIFIER))
 (define-empty-tokens punct-tokens (LEFT_PAREN RIGHT_PAREN LEFT_BRACE RIGHT_BRACE
                                    COMMA DOT MINUS PLUS SEMICOLON SLASH STAR
 
@@ -57,12 +57,16 @@
    ["true" (token-TRUE)]
    ["while" (token-WHILE)]
    ["var" (token-VAR)]
-   [(concatenation "\"" (repetition 0 +inf.0 any-char) "\"") (token-STRING (string-trim lexeme "\""))]
-   [(repetition 1 +inf.0 numeric) (token-NUM (string->number lexeme))]
+   [(concatenation "\"" (repetition 0 +inf.0 (char-complement "\"")) "\"") (token-STRING (string-trim lexeme "\""))]
+   [(concatenation (repetition 1 +inf.0 numeric) 
+      (union 
+        (repetition 0 +inf.0 numeric)
+        (concatenation #\. (repetition 1 +inf.0 numeric)))) (token-NUMBER (string->number lexeme))]
    ; invoke the lexer again to skip the current token
    ; the return-without-pos call is needed to avoid a "double" wrapping into a position token
    ; ref. https://github.com/racket/parser-tools/blob/b08f6137a3c067720c4b4723dd726652af288e97/parser-tools-lib/parser-tools/yacc.rkt#L247
    [whitespace (return-without-pos (lox-lexer input-port))]
+   [#\newline (return-without-pos (lox-lexer input-port))]
    [(concatenation (union alphabetic (char-set "_")) (repetition 0 +inf.0 (union alphabetic numeric (char-set "_")))) (token-IDENTIFIER lexeme)]))
 
 (provide lox-lexer basic-tokens punct-tokens)
