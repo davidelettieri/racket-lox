@@ -51,10 +51,7 @@
     (define value (token-value token))
     (cond
       [(hash-has-key? ht name) (print name (hash-ref ht name) "null")]
-      [(eq? 'NUMBER name) 
-        (if (integer? value)
-            (print name value (string-append (number->string value) ".0"))
-            (print name value value))]
+      [(eq? 'NUMBER name) (print name value (+ 0.0 value))]
       [(eq? 'STRING name) (print name (string-append "\"" value "\"") value)] 
       [else (print name value "null")])))
 
