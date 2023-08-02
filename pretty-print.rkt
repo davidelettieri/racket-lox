@@ -48,11 +48,15 @@
   (begin
     (define token (position-token-token pt))
     (define name (token-name token))
+    (define value (token-value token))
     (cond
       [(hash-has-key? ht name) (print name (hash-ref ht name) "null")]
-      [(eq? 'NUMBER name) (print name (token-value token) (token-value token))]
-      [(eq? 'STRING name) (print name (string-append "\"" (token-value token) "\"") (token-value token))] 
-      [else (print name (token-value token) "null")])))
+      [(eq? 'NUMBER name) 
+        (if (integer? value)
+            (print name value (string-append (number->string value) ".0"))
+            (print name value value))]
+      [(eq? 'STRING name) (print name (string-append "\"" value "\"") value)] 
+      [else (print name value "null")])))
 
 
 (provide pretty-print)
