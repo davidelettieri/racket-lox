@@ -21,7 +21,7 @@
      (check-eqv? (position-token-token (lox-lexer in)) 'STAR)
      (check-eqv? (position-token-token (lox-lexer in)) 'SLASH)
      (let ([t (lox-lexer in)])
-       (check-eqv? (token-name (position-token-token t)) 'NUM)
+       (check-eqv? (token-name (position-token-token t)) 'NUMBER)
        (check-eqv? (token-value (position-token-token t)) 123))
      (let ([t (lox-lexer in)])
        (check-eqv? (token-name (position-token-token t)) 'STRING)
