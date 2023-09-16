@@ -30,21 +30,9 @@
     (let [(t (l))] (if (eof-object? t) source (cons t (get-tokens-inner)))))
   (reverse (get-tokens-inner '())))
 
-; (define (lox-parser tokens)
-;   (define current 0)
-;   (define (declaration) #f)
-;   (define (peek) (list-ref current tokens))
-;   (define (is-at-end?) (eof-object? (peek)))
-;   (define (parse)
-;     (define statements '())
-;     (while (not (is-at-end?))
-;       (set! statements (cons (declaration) statements)))
-;     statements)
-;   (parse))
-
 (define lox-parser
   (parser
-   [start expr]
+   [start program]
    [end EOF]
    [error void]
    [src-pos]
@@ -54,25 +42,44 @@
    [precs (left PLUS MINUS)
           (left STAR SLASH)]
    [grammar
-    ; [program [() '()]
-    ;          [(declaration program) (cons $1 $2)]]
-    ; [declaration [(classDecl) $1]]
-    ;              [(funDecl) $1]
-    ;              [(varDecl) $1]
-    ;              [(statement) $1]
-    ; [functions [() '()]
-    ;            [(function functions) (cons $1 $2)]]
-    ; [classDecl [(CLASS IDENTIFIER LEFT_BRACE functions RIGHT_BRACE)]]
-          ; the start position of a parenthesized expression is the start position of the open '('
-    [expr [(LEFT_PAREN expr RIGHT_PAREN) (position-token->syntax $2 $1-start-pos $3-end-pos)] 
+    [program [(unary) (position-token->syntax `'(,$1) $1-start-pos $1-end-pos)]
+             [(unary program) (position-token->syntax `(cons ,$1 ,$2) $1-start-pos $2-end-pos)]]
+    ; expression     → equality ;
+    ; [expression [(equality) $1]]
+    ; ; equality       → comparison ( ( "!=" | "==" ) comparison )* ;
+    ; [equality [(comparison BANG_EQUAL comparison) (position-token->syntax `(not= ,$1 ,$3) $1-start-pos $3-end-pos)]
+    ;           [(comparison EQUAL_EQUAL comparison) (position-token->syntax `(= ,$1 ,$3) $1-start-pos $3-end-pos)]]
+    ; ; comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+    ; [comparison [(term GREATER term) (position-token->syntax `(> ,$1 ,$3) $1-start-pos $3-end-pos)]
+    ;             [(term GREATER_EQUAL term) (position-token->syntax `(>= ,$1 ,$3) $1-start-pos $3-end-pos)]
+    ;             [(term LESS term) (position-token->syntax `(< ,$1 ,$3) $1-start-pos $3-end-pos)]
+    ;             [(term LESS_EQUAL term) (position-token->syntax `(<= ,$1 ,$3) $1-start-pos $3-end-pos)]]
+    ; ; term           → factor ( ( "-" | "+" ) factor )* ;
+    ; [term [(factor PLUS factor) (position-token->syntax `(+ ,$1 ,$3) $1-start-pos $3-end-pos)]
+    ;       [(factor MINUS factor) (position-token->syntax `(- ,$1 ,$3) $1-start-pos $3-end-pos)]]
+    ; ; factor         → unary ( ( "/" | "*" ) unary )* ;
+    ; [factor [(unary STAR unary) (position-token->syntax `(* ,$1 ,$3) $1-start-pos $3-end-pos)]
+    ;         [(unary SLASH unary) (position-token->syntax `(/ ,$1 ,$3) $1-start-pos $3-end-pos)]]
+    ; ; unary → ( "!" | "-" ) unary | primary ;
+    [unary [(BANG unary) (position-token->syntax `(not ,$2) $1-start-pos $2-end-pos)]
+           [(MINUS unary) (position-token->syntax `(- ,$2) $1-start-pos $2-end-pos)]
+           [(primary) $1]]
+    ; primary → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
+    [primary [(NUMBER) (position-token->syntax $1 $1-start-pos $1-end-pos)]
+             [(TRUE) (position-token->syntax #t $1-start-pos $1-end-pos)]
+             [(FALSE) (position-token->syntax #f $1-start-pos $1-end-pos)]
+             [(NIL) (position-token->syntax #f $1-start-pos $1-end-pos)]]
+            ;  [(LEFT_PAREN expression RIGHT_PAREN) (position-token->syntax $2 $1-start-pos $3-end-pos)]
+            ;  [(IDENTIFIER) (position-token->syntax $1 $1-start-pos $1-end-pos)]]
+    ; [expr [(LEFT_PAREN expr RIGHT_PAREN) (position-token->syntax $2 $1-start-pos $3-end-pos)] 
           ; the start position of a number is the start position of the number token
-          [(NUMBER) (position-token->syntax $1 $1-start-pos $1-end-pos)]
-          ; the start position of all binary expression is the start position of the first expression
-          ; the end position is the end position of the second expression
-          [(expr STAR expr) (position-token->syntax `(multiply ,$1 ,$3) $1-start-pos $3-end-pos)]
-          [(expr SLASH expr) (position-token->syntax `(divide ,$1 ,$3) $1-start-pos $3-end-pos)]
-          [(expr MINUS expr) (position-token->syntax `(subtract ,$1 ,$3) $1-start-pos $3-end-pos)]
-          [(expr PLUS expr) (position-token->syntax `(add ,$1 ,$3) $1-start-pos $3-end-pos)]]
+          ; [(NUMBER) (position-token->syntax $1 $1-start-pos $1-end-pos)]
+          ; ; the start position of all binary expression is the start position of the first expression
+          ; ; the end position is the end position of the second expression
+          ; [(expr STAR expr) (position-token->syntax `(* ,$1 ,$3) $1-start-pos $3-end-pos)]
+          ; [(expr SLASH expr) (position-token->syntax `(/ ,$1 ,$3) $1-start-pos $3-end-pos)]
+          ; [(expr MINUS expr) (position-token->syntax `(- ,$1 ,$3) $1-start-pos $3-end-pos)]
+          ; [(expr PLUS expr) (position-token->syntax `(+ ,$1 ,$3) $1-start-pos $3-end-pos)]]
     ]))
 
 (provide lox-parser get-tokens)
