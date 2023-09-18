@@ -32,10 +32,10 @@
   (test-case
    "Simple expression are parsed correctly"
    (let ([sources (list
-                   '("2+2" . (add 2 2))
-                   '("2-2" . (subtract 2 2))
-                   '("2*3" . (multiply 2 3))
-                   '("2/3" . (divide 2 3))
-                   '("2+3*2" . (add 2 (multiply 3 2))))])
+                   '("2+2" . (+ 2 2))
+                   '("2-2" . (- 2 2))
+                   '("2*3" . (* 2 3))
+                   '("2/3" . (/ 2 3))
+                   '("2+3*2" . (+ 2 (* 3 2))))])
      (for-each
       (lambda (el) (check-equal? (syntax->datum (parse-string (car el))) (cdr el))) sources))))

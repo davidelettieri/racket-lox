@@ -3,23 +3,19 @@
 (require parser-tools/lex
          racket/match
          "lexer.rkt"
+         "parser.rkt"
          "pretty-print.rkt")
 
 (define (print-token pt)
   (define t (position-token-token pt))
   (fprintf (current-output-port) "~s ~a ~a\n" (token-name t) (token-value t) "null"))
 
+(define (parse-string s)
+    (let ([in (open-input-string s)])
+      (lox-parser (lambda () (lox-lexer in)))))
+
 (define (run source)
-  (define in (open-input-string source))
-  (define (get-token) (lox-lexer in))
-  (define (print-tokens)
-    (define t (get-token))
-    (if (not (eqv? 'EOF (position-token-token t)))
-      (begin
-        (pretty-print t)
-        (print-tokens))
-      (pretty-print t)))
-  (print-tokens))
+  (syntax->datum (parse-string source)))
 
 (define (run-file file-path)
   (define source (file->string file-path))

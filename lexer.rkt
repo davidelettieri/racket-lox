@@ -1,6 +1,7 @@
 #lang racket
 
-(require parser-tools/lex)
+(require parser-tools/lex
+         parser-tools/lex-sre)
 
 (define-tokens basic-tokens (NUMBER STRING IDENTIFIER))
 (define-empty-tokens punct-tokens (LEFT_PAREN RIGHT_PAREN LEFT_BRACE RIGHT_BRACE
@@ -58,7 +59,7 @@
    ["while" (token-WHILE)]
    ["var" (token-VAR)]
    [(concatenation "\"" (repetition 0 +inf.0 (char-complement "\"")) "\"") (token-STRING (string-trim lexeme "\""))]
-   [(concatenation (repetition 1 +inf.0 numeric) 
+   [(concatenation (? #\-) (repetition 1 +inf.0 numeric) 
       (union 
         (repetition 0 +inf.0 numeric)
         (concatenation #\. (repetition 1 +inf.0 numeric)))) (token-NUMBER (string->number lexeme))]
