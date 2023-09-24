@@ -15,7 +15,8 @@
       (lox-parser (lambda () (lox-lexer in)))))
 
 (define (run source)
-  (syntax->datum (parse-string source)))
+  (define ns (make-base-namespace))
+  (eval (parse-string source) ns))
 
 (define (run-file file-path)
   (define source (file->string file-path))

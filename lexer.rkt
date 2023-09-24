@@ -19,6 +19,11 @@
 
                                   EOF))
 
+(define-lex-abbrev lox-number 
+  (union 
+    (concatenation (? #\-) (repetition 1 +inf.0 numeric))
+    (concatenation #\. (repetition 1 +inf.0 numeric))))
+
 (define lox-lexer
   (lexer-src-pos
    [(eof) (token-EOF)]
@@ -58,11 +63,7 @@
    ["true" (token-TRUE)]
    ["while" (token-WHILE)]
    ["var" (token-VAR)]
-   [(concatenation "\"" (repetition 0 +inf.0 (char-complement "\"")) "\"") (token-STRING (string-trim lexeme "\""))]
-   [(concatenation (? #\-) (repetition 1 +inf.0 numeric) 
-      (union 
-        (repetition 0 +inf.0 numeric)
-        (concatenation #\. (repetition 1 +inf.0 numeric)))) (token-NUMBER (string->number lexeme))]
+   [lox-number  (token-NUMBER (string->number lexeme))]
    ; invoke the lexer again to skip the current token
    ; the return-without-pos call is needed to avoid a "double" wrapping into a position token
    ; ref. https://github.com/racket/parser-tools/blob/b08f6137a3c067720c4b4723dd726652af288e97/parser-tools-lib/parser-tools/yacc.rkt#L247

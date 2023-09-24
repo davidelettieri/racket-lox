@@ -46,7 +46,7 @@
   ;  [yacc-output "yacc.output.log"]
    [grammar
     [program [(expression) $1]
-             [(expression program) (position-token->syntax `(cons ,$1 ,$2) $1-start-pos $2-end-pos)]]
+             [(expression program) (cons $1 $2)]]
     ; expression     → equality ;
     [expression [(equality) $1]]
     ; ; equality       → comparison ( ( "!=" | "==" ) comparison )* ;
@@ -60,8 +60,8 @@
                 [(term LESS_EQUAL term) (position-token->syntax `(<= ,$1 ,$3) $1-start-pos $3-end-pos)]
                 [(term) $1]]
     ; ; term           → factor ( ( "-" | "+" ) factor )* ;
-    [term [(factor PLUS factor) (position-token->syntax `(+ ,$1 ,$3) $1-start-pos $3-end-pos)]
-          [(factor MINUS factor)(position-token->syntax `(- ,$1 ,$3) $1-start-pos $3-end-pos)]
+    [term [(factor PLUS term) (position-token->syntax `(+ ,$1 ,$3) $1-start-pos $3-end-pos)]
+          [(factor MINUS term)(position-token->syntax `(- ,$1 ,$3) $1-start-pos $3-end-pos)]
           [(factor) $1]]
     ; ; factor         → unary ( ( "/" | "*" ) unary )* ;
     [factor [(unary STAR unary) (position-token->syntax `(* ,$1 ,$3) $1-start-pos $3-end-pos)]
