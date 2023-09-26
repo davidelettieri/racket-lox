@@ -63,6 +63,7 @@
    ["true" (token-TRUE)]
    ["while" (token-WHILE)]
    ["var" (token-VAR)]
+   [(concatenation "\"" (repetition 0 +inf.0 (char-complement "\"")) "\"") (token-STRING (string-trim lexeme "\""))]
    [lox-number  (token-NUMBER (string->number lexeme))]
    ; invoke the lexer again to skip the current token
    ; the return-without-pos call is needed to avoid a "double" wrapping into a position token

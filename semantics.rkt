@@ -1,25 +1,17 @@
 #lang racket/base
 
-(define subtract -)
-(define add +)
-(define multiply *)
-(define divide /)
+(require (for-syntax racket/base racket/syntax))
 
-(define-syntax-rule (binary left operator right)
-    (operator left right))
+(define-syntax (lox-var stx)
+  (syntax-case stx ()
+    [(lox-var name val)
+     (with-syntax ([name_ (format-id #'name "~a" #'name)])
+       #'(define name_ val))]))
 
-; (struct (lox-call callee paren arguments))
-; (struct (lox-get obj name))
-; (struct (lox-grouping expr))
-; (struct (lox-literal value))
-; (struct (lox-logical left operator right))
-; (struct (lox-unary operator right))
-; (struct (lox-set obj name value))
-; (struct (lox-super))
+(define-syntax lox-program
+  (syntax-rules ()
+    [(lox-program a) a]
+    [(lox-program a ...) (begin a ...)]))
 
-(provide subtract
-         add
-         multiply
-         divide
-         binary)
+(provide lox-var lox-program)
 

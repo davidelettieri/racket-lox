@@ -14,5 +14,5 @@
     (with-syntax ([result (lox-parser (lambda () (lox-lexer in)))])
       (strip-context
        #'(module anything racket
-           (require "semantics.rkt")
+           (require racket-lox/semantics)
            result)))))

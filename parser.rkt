@@ -45,8 +45,16 @@
   ;  [debug "debug.log"]
   ;  [yacc-output "yacc.output.log"]
    [grammar
-    [program [(expression) $1]
-             [(expression program) (cons $1 $2)]]
+    [program [(declaration) `(lox-program ,$1)]
+             [(declaration program) `(lox-program ,$1 ,$2)]]
+    [declaration [(varDecl) $1]
+                 [(statement) $1]]
+    [varDecl [(VAR IDENTIFIER SEMICOLON) (position-token->syntax `(lox-var ,$2 #f) $1-start-pos $3-end-pos)]
+             [(VAR IDENTIFIER EQUAL expression SEMICOLON) (position-token->syntax `(lox-var ,$2 ,$4) $1-start-pos $3-end-pos)]]
+    [statement [(exprStmt) $1]
+               [(printStmt) $1]]
+    [exprStmt [(expression SEMICOLON) $1]]
+    [printStmt [(PRINT expression SEMICOLON) (position-token->syntax `(println ,$2) $1-start-pos $3-end-pos)]]
     ; expression     → equality ;
     [expression [(equality) $1]]
     ; ; equality       → comparison ( ( "!=" | "==" ) comparison )* ;
@@ -72,6 +80,7 @@
            [(primary) $1]]
     ; primary → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
     [primary [(NUMBER) (position-token->syntax $1 $1-start-pos $1-end-pos)]
+             [(STRING) (position-token->syntax $1 $1-start-pos $1-end-pos)]
              [(TRUE) (position-token->syntax #t $1-start-pos $1-end-pos)]
              [(FALSE) (position-token->syntax #f $1-start-pos $1-end-pos)]
              [(NIL) (position-token->syntax #f $1-start-pos $1-end-pos)]
