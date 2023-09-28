@@ -49,14 +49,16 @@
              [(declaration program) `(lox-program ,$1 ,$2)]]
     [declaration [(varDecl) $1]
                  [(statement) $1]]
-    [varDecl [(VAR IDENTIFIER SEMICOLON) (position-token->syntax `(lox-var ,$2 #f) $1-start-pos $3-end-pos)]
-             [(VAR IDENTIFIER EQUAL expression SEMICOLON) (position-token->syntax `(lox-var ,$2 ,$4) $1-start-pos $3-end-pos)]]
+    [varDecl [(VAR IDENTIFIER SEMICOLON) (position-token->syntax `(lox-define-var ,$2 #f) $1-start-pos $3-end-pos)]
+             [(VAR IDENTIFIER EQUAL expression SEMICOLON) (position-token->syntax `(lox-define-var ,$2 ,$4) $1-start-pos $3-end-pos)]]
     [statement [(exprStmt) $1]
                [(printStmt) $1]]
     [exprStmt [(expression SEMICOLON) $1]]
     [printStmt [(PRINT expression SEMICOLON) (position-token->syntax `(println ,$2) $1-start-pos $3-end-pos)]]
     ; expression     → equality ;
-    [expression [(equality) $1]]
+    [expression [(assignment) $1]]
+    [assignment [(IDENTIFIER EQUAL assignment) (position-token->syntax `(lox-assignment ,$1 ,$3) $1-start-pos $3-end-pos)]
+                [(equality) $1]]
     ; ; equality       → comparison ( ( "!=" | "==" ) comparison )* ;
     [equality [(comparison BANG_EQUAL comparison) (position-token->syntax `(not= ,$1 ,$3) $1-start-pos $3-end-pos)]
               [(comparison EQUAL_EQUAL comparison) (position-token->syntax `(= ,$1 ,$3) $1-start-pos $3-end-pos)]
@@ -85,7 +87,7 @@
              [(FALSE) (position-token->syntax #f $1-start-pos $1-end-pos)]
              [(NIL) (position-token->syntax #f $1-start-pos $1-end-pos)]
              [(LEFT_PAREN expression RIGHT_PAREN) (position-token->syntax $2 $1-start-pos $3-end-pos)]
-             [(IDENTIFIER) (position-token->syntax $1 $1-start-pos $1-end-pos)]]
+             [(IDENTIFIER) (position-token->syntax `(lox-var-value ,$1) $1-start-pos $1-end-pos)]]
     ]))
 
 (provide lox-parser get-tokens)

@@ -15,4 +15,7 @@
       (strip-context
        #'(module anything racket
            (require racket-lox/semantics)
-           result)))))
+           (define (main)
+              result
+              (void))
+           (main))))))
