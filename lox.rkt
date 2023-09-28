@@ -14,10 +14,14 @@
     (let ([in (open-input-string s)])
       (lox-parser (lambda () (lox-lexer in)))))
 
-(define (run-lox-file file)
+(define (run source)
   (parameterize ([current-namespace (make-base-namespace)])
     (namespace-require 'racket-lox/semantics)
-    (load file)))
+    (eval (parse-string source))))
+
+(define (run-file file-path)
+  (define source (file->string file-path))
+  (run source))
 
 (define (run-prompt) (raise "run-prompt not implemented"))
 
@@ -27,6 +31,6 @@
 
 (cond
   [(> args-number 1) (raise "Usage racket lox [script]")]
-  [(= args-number 1) (run-lox-file (vector-ref args 0))]
+  [(= args-number 1) (run-file (vector-ref args 0))]
   [else (run-prompt)]
   )

@@ -54,10 +54,11 @@
     [statement [(exprStmt) $1]
                [(printStmt) $1]]
     [exprStmt [(expression SEMICOLON) $1]]
-    [printStmt [(PRINT expression SEMICOLON) (position-token->syntax `(println ,$2) $1-start-pos $3-end-pos)]]
+    [printStmt [(PRINT expression SEMICOLON) (position-token->syntax `(lox-print ,$2) $1-start-pos $3-end-pos)]]
     ; expression     → equality ;
     [expression [(assignment) $1]]
     [assignment [(IDENTIFIER EQUAL assignment) (position-token->syntax `(lox-assignment ,$1 ,$3) $1-start-pos $3-end-pos)]
+    ;            [(equality EQUAL assignment) (position-token->syntax `(lox-invalid-assignment-target) $1-start-pos $3-end-pos)]
                 [(equality) $1]]
     ; ; equality       → comparison ( ( "!=" | "==" ) comparison )* ;
     [equality [(comparison BANG_EQUAL comparison) (position-token->syntax `(not= ,$1 ,$3) $1-start-pos $3-end-pos)]
