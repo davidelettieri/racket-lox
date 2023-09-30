@@ -6,11 +6,11 @@
     "configurations": [
         {
             "name": "tool",
-            "cwd": "",
-            "program": "craftinginterpreters/tool/bin/test.dart",
+            "cwd": "craftinginterpreters",
+            "program": "tool/bin/test.dart",
             "request": "launch",
             "type": "dart",
-            "args": ["chap06_parsing --interpreter racket --arguments ../lox.rkt"]
+            "args": ["chap08_statements", "--interpreter", "racket", "--arguments", "../lox.rkt"]
         }
     ]
 }

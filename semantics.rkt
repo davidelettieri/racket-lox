@@ -30,8 +30,5 @@
 (define-syntax-rule (lox-print value)
   (displayln value))
 
-(define-syntax-rule (lox-invalid-assignment-target)
-  (displayln "Error at '=': Invalid assignment target."))
-
-(provide lox-define-var lox-program lox-assignment lox-var-value lox-print lox-invalid-assignment-target)
+(provide lox-define-var lox-program lox-assignment lox-var-value lox-print)
 

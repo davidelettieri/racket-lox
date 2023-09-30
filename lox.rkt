@@ -1,18 +1,16 @@
 #lang racket
 
-(require parser-tools/lex
-         racket/match
-         "lexer.rkt"
-         "parser.rkt"
-         "pretty-print.rkt")
+(require "lexer.rkt"
+         "parser.rkt")
 
-(define (print-token pt)
-  (define t (position-token-token pt))
-  (fprintf (current-output-port) "~s ~a ~a\n" (token-name t) (token-value t) "null"))
+(define stderr (open-output-file "/dev/stderr" #:exists 'append))
 
 (define (parse-string s)
     (let ([in (open-input-string s)])
-      (lox-parser (lambda () (lox-lexer in)))))
+      (port-count-lines! in)
+      (with-handlers 
+        ([exn:fail? (lambda (exn) (displayln (exn-message exn) stderr) (exit 65))])
+        (lox-parser (lambda () (lox-lexer in))))))
 
 (define (run source)
   (parameterize ([current-namespace (make-base-namespace)])

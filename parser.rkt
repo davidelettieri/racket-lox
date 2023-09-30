@@ -30,20 +30,26 @@
     (let [(t (l))] (if (eof-object? t) source (cons t (get-tokens-inner)))))
   (reverse (get-tokens-inner '())))
 
+; (lambda (tok-ok? tok-name tok-value start-pos end-pos)
+(define (raise-parse-error tok-ok? tok-name tok-value start-pos end-pos)
+  (cond
+    [(not tok-ok?) (raise-user-error "unexpected token")]
+    [(eqv? tok-name 'EQUAL) (raise-user-error (format "[line ~a] Error at '=': Invalid assignment target." (position-line start-pos)))]
+    [else (begin (println (list tok-ok? tok-name tok-value start-pos end-pos)) (raise-user-error "t"))]))
+
 (define lox-parser
   (parser
    [start program]
    [end EOF]
-   (error (lambda (a t v start end) 
-            (displayln (list a t v start end))))
+   [error raise-parse-error]
    [src-pos]
    [tokens basic-tokens punct-tokens]
    ; precs clause go from lowest to highest priority
    ; tokens at the same level share the same priority
    [precs (left PLUS MINUS)
           (left STAR SLASH)]
-  ;  [debug "debug.log"]
-  ;  [yacc-output "yacc.output.log"]
+   ;  [debug "debug.log"]
+   ;  [yacc-output "yacc.output.log"]
    [grammar
     [program [(declaration) `(lox-program ,$1)]
              [(declaration program) `(lox-program ,$1 ,$2)]]
@@ -58,7 +64,6 @@
     ; expression     → equality ;
     [expression [(assignment) $1]]
     [assignment [(IDENTIFIER EQUAL assignment) (position-token->syntax `(lox-assignment ,$1 ,$3) $1-start-pos $3-end-pos)]
-    ;            [(equality EQUAL assignment) (position-token->syntax `(lox-invalid-assignment-target) $1-start-pos $3-end-pos)]
                 [(equality) $1]]
     ; ; equality       → comparison ( ( "!=" | "==" ) comparison )* ;
     [equality [(comparison BANG_EQUAL comparison) (position-token->syntax `(not= ,$1 ,$3) $1-start-pos $3-end-pos)]
@@ -87,7 +92,8 @@
              [(TRUE) (position-token->syntax #t $1-start-pos $1-end-pos)]
              [(FALSE) (position-token->syntax #f $1-start-pos $1-end-pos)]
              [(NIL) (position-token->syntax #f $1-start-pos $1-end-pos)]
-             [(LEFT_PAREN expression RIGHT_PAREN) (position-token->syntax $2 $1-start-pos $3-end-pos)]
+             [(LEFT_PAREN program RIGHT_PAREN) (position-token->syntax $2 $1-start-pos $3-end-pos)]
+             [(LEFT_BRACE program RIGHT_BRACE) (position-token->syntax $2 $1-start-pos $3-end-pos)]
              [(IDENTIFIER) (position-token->syntax `(lox-var-value ,$1) $1-start-pos $1-end-pos)]]
     ]))
 
