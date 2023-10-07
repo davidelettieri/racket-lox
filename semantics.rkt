@@ -4,18 +4,18 @@
 
 (define-syntax (lox-define-var stx)
   (syntax-case stx ()
-    [(lox-define-var name val)
+    [(_ name val)
      (with-syntax ([name_ (format-id #'name "~a" (syntax-e #'name))])
        #'(define name_ val))]))
 
 (define-syntax lox-program
   (syntax-rules ()
-    [(lox-program a) (if (empty? a) (void) a)]
+    [(lox-program a) a]
     [(lox-program a ...) (begin a ...)]))
 
 (define-syntax lox-declarations
   (syntax-rules ()
-    [(lox-declarations a) (if (empty? a) (void) a)]
+    [(lox-declarations a) a]
     [(lox-declarations a ...) (begin a ...)]))
 
 (define-syntax (lox-assignment stx)

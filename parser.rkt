@@ -4,14 +4,6 @@
          parser-tools/lex
          "lexer.rkt")
 
-
-(define-syntax-rule (while test body ...)
-  (local [(define (loop)
-            (when test
-              body ...
-              (loop)))]
-    (loop)))
-
 ; (struct srcloc (source line column position span))
 (define (positions->srcloc start-pos end-pos)
   (srcloc #f
@@ -51,7 +43,7 @@
    ;  [debug "debug.log"]
    ;  [yacc-output "yacc.output.log"]
    [grammar
-    [program [(declaration) `(lox-program ,$1)]
+    [program [() (void)]
              [(declaration program) `(lox-program ,$1 ,$2)]]
     [declaration [(varDecl) $1]
                  [(statement) $1]]
@@ -61,7 +53,7 @@
                [(printStmt) $1]
                [(block) $1]]
     [block [(LEFT_BRACE declarations RIGHT_BRACE) (position-token->syntax $2 $1-start-pos $3-end-pos)]]
-    [declarations [() '()]
+    [declarations [() (void)]
                 [(declaration declarations) (position-token->syntax `(lox-declarations ,$1 ,$2) $1-start-pos $2-end-pos)]]
     [exprStmt [(expression SEMICOLON) $1]]
     [printStmt [(PRINT expression SEMICOLON) (position-token->syntax `(lox-print ,$2) $1-start-pos $3-end-pos)]]

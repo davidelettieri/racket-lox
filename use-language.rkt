@@ -1,6 +1,4 @@
 #lang racket-lox
 
-{
-  var a = "before";
-  print a; // expect: before
-}
+var a = "a";
+(a) = "value"; // Error at '=': Invalid assignment target.
