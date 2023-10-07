@@ -88,7 +88,7 @@
              [(TRUE) (position-token->syntax #t $1-start-pos $1-end-pos)]
              [(FALSE) (position-token->syntax #f $1-start-pos $1-end-pos)]
              [(NIL) (position-token->syntax #f $1-start-pos $1-end-pos)]
-             [(LEFT_PAREN program RIGHT_PAREN) (position-token->syntax $2 $1-start-pos $3-end-pos)]
+             [(LEFT_PAREN expression RIGHT_PAREN) (position-token->syntax $2 $1-start-pos $3-end-pos)]
              [(IDENTIFIER) (position-token->syntax `(lox-var-value ,$1) $1-start-pos $1-end-pos)]]
     ]))
 
