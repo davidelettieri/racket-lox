@@ -1,12 +1,32 @@
 #lang racket
 
-(require (for-syntax racket/base racket/syntax))
+(require (for-syntax racket/base))
 
-(define-syntax (lox-define-var stx)
+(define global-environment (make-hash))
+
+(define-syntax-rule (lox-define-var name value)
+  (hash-set! global-environment name value))
+
+(define-syntax (lox-var-value stx)
+  (syntax-case stx ()
+    [(_ name)
+     #'(hash-ref global-environment name (lambda () (undefined-variable name (syntax-line #'name))))]))
+
+(define stderr (open-output-file "/dev/stderr" #:exists 'append))
+
+(define-syntax-rule (undefined-variable name line)
+  (begin 
+    (displayln (format "Undefined variable '~a'." name) stderr)
+    (displayln (format "[line ~a] in script" line) stderr)
+    (exit 70)))
+
+(define-syntax (lox-assignment stx)
   (syntax-case stx ()
     [(_ name val)
-     (with-syntax ([name_ (format-id #'name "~a" (syntax-e #'name))])
-       #'(define name_ val))]))
+        #'(begin 
+            (hash-ref global-environment name (lambda () (undefined-variable name (syntax-line #'name))))
+            (hash-set! global-environment name val)
+            val)]))
 
 (define-syntax lox-program
   (syntax-rules ()
@@ -18,27 +38,13 @@
     [(lox-declarations a) a]
     [(lox-declarations a ...) (begin a ...)]))
 
-(define-syntax (lox-assignment stx)
-  (syntax-case stx ()
-    [(_ name val)
-     (with-syntax ([name_ (format-id #'name "~a" #'name)])
-       #'(begin
-           (set! name_ val)
-           val))]))
-
-(define-syntax (lox-var-value stx)
-  (syntax-case stx ()
-    [(_ name)
-     (with-syntax ([name_ (format-id #'name "~a" #'name)])
-       #'name_)]))
-
 (define-syntax-rule (lox-print value)
   (displayln value))
 
-(provide lox-define-var 
-         lox-program 
-         lox-assignment 
-         lox-var-value 
+(provide lox-define-var
+         lox-program
+         lox-assignment
+         lox-var-value
          lox-print
          lox-declarations)
 

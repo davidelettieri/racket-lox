@@ -1,4 +1,3 @@
 #lang racket-lox
 
-var a = "a";
-(a) = "value"; // Error at '=': Invalid assignment target.
+print a; // expect runtime error: Undefined variable 'unknown'.
