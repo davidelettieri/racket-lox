@@ -27,6 +27,7 @@
   (cond
     [(not tok-ok?) (raise-user-error "unexpected token")]
     [(eqv? tok-name 'EQUAL) (raise-user-error (format "[line ~a] Error at '=': Invalid assignment target." (position-line start-pos)))]
+    [(eqv? tok-name 'DOT) (raise-user-error (format "[line ~a] Error at '.': Expect expression." (position-line start-pos)))]
     [else (begin (println (list tok-ok? tok-name tok-value start-pos end-pos)) (raise-user-error "t"))]))
 
 (define lox-parser
@@ -87,7 +88,7 @@
              [(STRING) (position-token->syntax $1 $1-start-pos $1-end-pos)]
              [(TRUE) (position-token->syntax #t $1-start-pos $1-end-pos)]
              [(FALSE) (position-token->syntax #f $1-start-pos $1-end-pos)]
-             [(NIL) (position-token->syntax #f $1-start-pos $1-end-pos)]
+             [(NIL) (position-token->syntax `lox-nil $1-start-pos $1-end-pos)]
              [(LEFT_PAREN expression RIGHT_PAREN) (position-token->syntax $2 $1-start-pos $3-end-pos)]
              [(IDENTIFIER) (position-token->syntax `(lox-var-value ,$1) $1-start-pos $1-end-pos)]]
     ]))

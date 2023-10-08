@@ -9,6 +9,8 @@
 (define-syntax-rule (lox-define-var name value)
   (hash-set! (state-environment _state) name value))
 
+(define lox-nil 'nil)
+
 (define-syntax (lox-var-value stx)
   (syntax-case stx ()
     [(_ name)
@@ -47,10 +49,11 @@
     a ...
     (set-state-environment! _state previous)))
 
-(define-syntax-rule (lox-print value)
-  (if (boolean? value) 
-      (print-bool value)
-      (displayln value)))
+(define (lox-print value)
+  (cond
+   [(boolean? value) (print-bool value)]
+   [(eqv? value 'nil) (displayln "nil")]
+   [else (displayln value)]))
 
 (define (print-bool value)
   (displayln (if value "true" "false")))
@@ -61,5 +64,6 @@
          lox-var-value
          lox-print
          lox-declarations
-         lox-block)
+         lox-block
+         lox-nil)
 

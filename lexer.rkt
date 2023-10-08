@@ -20,9 +20,9 @@
                                   EOF))
 
 (define-lex-abbrev lox-number 
-  (union 
+  (concatenation 
     (concatenation (? #\-) (repetition 1 +inf.0 numeric))
-    (concatenation #\. (repetition 1 +inf.0 numeric))))
+    (? (concatenation #\. (repetition 1 +inf.0 numeric)))))
 
 (define lox-lexer
   (lexer-src-pos
