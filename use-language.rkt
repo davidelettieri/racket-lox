@@ -1,3 +1,11 @@
 #lang racket-lox
 
-print a; // expect runtime error: Undefined variable 'unknown'.
+var a = "outer";
+
+{
+  var a = "inner";
+  print a; // expect: inner
+}
+
+print a; // expect: outer
+

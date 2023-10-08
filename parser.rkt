@@ -52,7 +52,7 @@
     [statement [(exprStmt) $1]
                [(printStmt) $1]
                [(block) $1]]
-    [block [(LEFT_BRACE declarations RIGHT_BRACE) (position-token->syntax $2 $1-start-pos $3-end-pos)]]
+    [block [(LEFT_BRACE declarations RIGHT_BRACE) (position-token->syntax `(lox-block ,$2) $1-start-pos $3-end-pos)]]
     [declarations [() (void)]
                 [(declaration declarations) (position-token->syntax `(lox-declarations ,$1 ,$2) $1-start-pos $2-end-pos)]]
     [exprStmt [(expression SEMICOLON) $1]]
