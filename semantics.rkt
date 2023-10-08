@@ -48,7 +48,12 @@
     (set-state-environment! _state previous)))
 
 (define-syntax-rule (lox-print value)
-  (displayln value))
+  (if (boolean? value) 
+      (print-bool value)
+      (displayln value)))
+
+(define (print-bool value)
+  (displayln (if value "true" "false")))
 
 (provide lox-define-var
          lox-program

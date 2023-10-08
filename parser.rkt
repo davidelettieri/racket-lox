@@ -62,8 +62,8 @@
     [assignment [(IDENTIFIER EQUAL assignment) (position-token->syntax `(lox-assignment ,$1 ,$3) $1-start-pos $3-end-pos)]
                 [(equality) $1]]
     ; ; equality       → comparison ( ( "!=" | "==" ) comparison )* ;
-    [equality [(comparison BANG_EQUAL comparison) (position-token->syntax `(not= ,$1 ,$3) $1-start-pos $3-end-pos)]
-              [(comparison EQUAL_EQUAL comparison) (position-token->syntax `(= ,$1 ,$3) $1-start-pos $3-end-pos)]
+    [equality [(comparison BANG_EQUAL comparison) (position-token->syntax `(not (eqv? ,$1 ,$3)) $1-start-pos $3-end-pos)]
+              [(comparison EQUAL_EQUAL comparison) (position-token->syntax `(eqv? ,$1 ,$3) $1-start-pos $3-end-pos)]
               [(comparison) $1]]
     ; ; comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
     [comparison [(term GREATER term) (position-token->syntax `(> ,$1 ,$3) $1-start-pos $3-end-pos)]
