@@ -73,7 +73,7 @@
                 [(term LESS_EQUAL term) (position-token->syntax `(<= ,$1 ,$3) $1-start-pos $3-end-pos)]
                 [(term) $1]]
     ; ; term           → factor ( ( "-" | "+" ) factor )* ;
-    [term [(factor PLUS term) (position-token->syntax `(+ ,$1 ,$3) $1-start-pos $3-end-pos)]
+    [term [(factor PLUS term) (position-token->syntax `(lox-add ,$1 ,$3) $1-start-pos $3-end-pos)]
           [(factor MINUS term)(position-token->syntax `(- ,$1 ,$3) $1-start-pos $3-end-pos)]
           [(factor) $1]]
     ; ; factor         → unary ( ( "/" | "*" ) unary )* ;
@@ -84,8 +84,8 @@
     [unary [(BANG unary) (position-token->syntax `(not ,$2) $1-start-pos $2-end-pos)]
            [(primary) $1]]
     ; primary → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
-    [primary [(NUMBER) (position-token->syntax $1 $1-start-pos $1-end-pos)]
-             [(STRING) (position-token->syntax $1 $1-start-pos $1-end-pos)]
+    [primary [(NUMBER) (position-token->syntax `(lox-number ,$1) $1-start-pos $1-end-pos)]
+             [(STRING) (position-token->syntax `(lox-string ,$1) $1-start-pos $1-end-pos)]
              [(TRUE) (position-token->syntax #t $1-start-pos $1-end-pos)]
              [(FALSE) (position-token->syntax #f $1-start-pos $1-end-pos)]
              [(NIL) (position-token->syntax `lox-nil $1-start-pos $1-end-pos)]

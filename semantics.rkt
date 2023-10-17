@@ -14,13 +14,13 @@
 (define-syntax (lox-var-value stx)
   (syntax-case stx ()
     [(_ name)
-     #'(hash-ref (state-environment _state) name (lambda () (undefined-variable name (syntax-line #'name))))]))
+     #'(hash-ref (state-environment _state) name (lambda () (lox-runtime-error (format "Undefined variable '~a'." name) (syntax-line #'name))))]))
 
 (define stderr (open-output-file "/dev/stderr" #:exists 'append))
 
-(define (undefined-variable name line)
+(define (lox-runtime-error message line)
   (begin 
-    (displayln (format "Undefined variable '~a'." name) stderr)
+    (displayln message stderr)
     (displayln (format "[line ~a] in script" line) stderr)
     (exit 70)))
 
@@ -28,7 +28,7 @@
   (syntax-case stx ()
     [(_ name val)
         #'(begin 
-            (hash-ref (state-environment _state) name (lambda () (undefined-variable name (syntax-line #'name))))
+            (hash-ref (state-environment _state) name (lambda () (lox-runtime-error (format "Undefined variable '~a'." name) (syntax-line #'name))))
             (hash-set! (state-environment _state) name val)
             val)]))
 
@@ -58,6 +58,15 @@
 (define (print-bool value)
   (displayln (if value "true" "false")))
 
+(define-syntax lox-add
+  (syntax-rules (lox-number lox-string)
+    [(_ (lox-number a) (lox-number b)) (+ a b)]
+    [(_ (lox-string a) (lox-string b)) (string-append a b)]
+    [(_ a b) (lox-runtime-error "Operands must be two numbers or two strings." (syntax-line #'a))]))
+
+(define-syntax-rule (lox-string s) s)
+(define-syntax-rule (lox-number n) n)
+
 (provide lox-define-var
          lox-program
          lox-assignment
@@ -65,5 +74,8 @@
          lox-print
          lox-declarations
          lox-block
-         lox-nil)
+         lox-nil
+         lox-add
+         lox-number
+         lox-string)
 
