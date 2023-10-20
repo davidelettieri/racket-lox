@@ -21,7 +21,7 @@
 
 (define-lex-abbrev lox-number 
   (concatenation 
-    (concatenation (? #\-) (repetition 1 +inf.0 numeric))
+    (repetition 1 +inf.0 numeric)
     (? (concatenation #\. (repetition 1 +inf.0 numeric)))))
 
 (define lox-lexer

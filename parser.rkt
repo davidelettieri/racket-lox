@@ -28,6 +28,7 @@
     [(not tok-ok?) (raise-user-error "unexpected token")]
     [(eqv? tok-name 'EQUAL) (raise-user-error (format "[line ~a] Error at '=': Invalid assignment target." (position-line start-pos)))]
     [(eqv? tok-name 'DOT) (raise-user-error (format "[line ~a] Error at '.': Expect expression." (position-line start-pos)))]
+    [(eqv? tok-name 'SEMICOLON) (raise-user-error (format "[line ~a] Error at ';': Expect expression." (position-line start-pos)))]
     [else (begin (println (list tok-ok? tok-name tok-value start-pos end-pos)) (raise-user-error "t"))]))
 
 (define lox-parser
@@ -48,8 +49,8 @@
              [(declaration program) `(lox-program ,$1 ,$2)]]
     [declaration [(varDecl) $1]
                  [(statement) $1]]
-    [varDecl [(VAR IDENTIFIER SEMICOLON) (position-token->syntax `(lox-define-var ,$2 #f) $1-start-pos $3-end-pos)]
-             [(VAR IDENTIFIER EQUAL expression SEMICOLON) (position-token->syntax `(lox-define-var ,$2 ,$4) $1-start-pos $3-end-pos)]]
+    [varDecl [(VAR IDENTIFIER SEMICOLON) (position-token->syntax `(lox-define-var ,$2 lox-nil) $1-start-pos $3-end-pos)]
+             [(VAR IDENTIFIER EQUAL expression SEMICOLON) (position-token->syntax `(lox-define-var ,$2 ,$4) $1-start-pos $5-end-pos)]]
     [statement [(exprStmt) $1]
                [(printStmt) $1]
                [(block) $1]]
@@ -67,21 +68,22 @@
               [(comparison EQUAL_EQUAL comparison) (position-token->syntax `(eqv? ,$1 ,$3) $1-start-pos $3-end-pos)]
               [(comparison) $1]]
     ; ; comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-    [comparison [(term GREATER term) (position-token->syntax `(> ,$1 ,$3) $1-start-pos $3-end-pos)]
-                [(term GREATER_EQUAL term) (position-token->syntax `(>= ,$1 ,$3) $1-start-pos $3-end-pos)]
-                [(term LESS term) (position-token->syntax `(< ,$1 ,$3) $1-start-pos $3-end-pos)]
-                [(term LESS_EQUAL term) (position-token->syntax `(<= ,$1 ,$3) $1-start-pos $3-end-pos)]
+    [comparison [(term GREATER term) (position-token->syntax `(lox-greater ,$1 ,$3) $1-start-pos $3-end-pos)]
+                [(term GREATER_EQUAL term) (position-token->syntax `(lox-greater-equal ,$1 ,$3) $1-start-pos $3-end-pos)]
+                [(term LESS term) (position-token->syntax `(lox-less ,$1 ,$3) $1-start-pos $3-end-pos)]
+                [(term LESS_EQUAL term) (position-token->syntax `(lox-less-equal ,$1 ,$3) $1-start-pos $3-end-pos)]
                 [(term) $1]]
     ; ; term           → factor ( ( "-" | "+" ) factor )* ;
     [term [(factor PLUS term) (position-token->syntax `(lox-add ,$1 ,$3) $1-start-pos $3-end-pos)]
-          [(factor MINUS term)(position-token->syntax `(- ,$1 ,$3) $1-start-pos $3-end-pos)]
+          [(factor MINUS term)(position-token->syntax `(lox-subtract ,$1 ,$3) $1-start-pos $3-end-pos)]
           [(factor) $1]]
     ; ; factor         → unary ( ( "/" | "*" ) unary )* ;
-    [factor [(unary STAR unary) (position-token->syntax `(* ,$1 ,$3) $1-start-pos $3-end-pos)]
-            [(unary SLASH unary) (position-token->syntax `(/ ,$1 ,$3) $1-start-pos $3-end-pos)]
+    [factor [(unary STAR unary) (position-token->syntax `(lox-multiply ,$1 ,$3) $1-start-pos $3-end-pos)]
+            [(unary SLASH unary) (position-token->syntax `(lox-divide ,$1 ,$3) $1-start-pos $3-end-pos)]
             [(unary) $1]]
     ; ; unary → ( "!" | "-" ) unary | primary ;
     [unary [(BANG unary) (position-token->syntax `(not ,$2) $1-start-pos $2-end-pos)]
+           [(MINUS unary) (position-token->syntax `(lox-negate ,$2) $1-start-pos $2-end-pos)]
            [(primary) $1]]
     ; primary → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
     [primary [(NUMBER) (position-token->syntax `(lox-number ,$1) $1-start-pos $1-end-pos)]
