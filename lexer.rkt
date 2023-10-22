@@ -72,4 +72,12 @@
    [#\newline (return-without-pos (lox-lexer input-port))]
    [(concatenation (union alphabetic (char-set "_")) (repetition 0 +inf.0 (union alphabetic numeric (char-set "_")))) (token-IDENTIFIER lexeme)]))
 
-(provide lox-lexer basic-tokens punct-tokens)
+(define (get-tokens in)
+  (define (impl r)
+    (let ((t (in)))
+    (if (eqv? (position-token-token t) 'EOF)
+        r
+        (impl (cons t r)))))
+  (reverse (impl '())))
+
+(provide lox-lexer basic-tokens punct-tokens get-tokens)

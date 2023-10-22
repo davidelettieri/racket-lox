@@ -1,16 +1,18 @@
 #lang racket
 
 (require "lexer.rkt"
-         "parser.rkt")
+         "manual-parser.rkt")
 
 (define stderr (open-output-file "/dev/stderr" #:exists 'append))
 
 (define (parse-string s)
-    (let ([in (open-input-string s)])
-      (port-count-lines! in)
+    (let ([source (open-input-string s)])
+      (port-count-lines! source)
+      (define in (lambda () (lox-lexer source)))
+      (define tokens (get-tokens in))
       (with-handlers 
         ([exn:fail? (lambda (exn) (displayln (exn-message exn) stderr) (exit 65))])
-        (lox-parser (lambda () (lox-lexer in))))))
+        (parse tokens))))
 
 (define (run source)
   (parameterize ([current-namespace (make-base-namespace)])

@@ -1,7 +1,7 @@
 #lang racket
  
 (module reader racket
-  (require syntax/strip-context "lexer.rkt" "parser.rkt")
+  (require syntax/strip-context "lexer.rkt" "manual-parser.rkt")
  
   (provide (rename-out [my-read read]
                        [my-read-syntax read-syntax]))
@@ -11,7 +11,7 @@
      (my-read-syntax #f in)))
  
   (define (my-read-syntax src in)
-    (with-syntax ([result (lox-parser (lambda () (lox-lexer in)))])
+    (with-syntax ([result (parse (get-tokens (lambda () (lox-lexer in))))])
       (strip-context
        #'(module anything racket
            (require racket-lox/semantics)
