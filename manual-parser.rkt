@@ -22,7 +22,7 @@
 (define (parse-impl)
   (if (is-at-end) 
     (void) 
-    (set! statements (cons (declaration) statements))))
+    (set! statements (cons (primary) statements))))
 
 (define (declaration)
   (cond
@@ -36,7 +36,6 @@
 
 (define (varDeclaration)
   (define start-token (previous))
-  (displayln start-token)
   (define name (consume 'IDENTIFIER "Expect variable name"))
   (define initializer
     (if (match? 'EQUAL)
@@ -46,7 +45,14 @@
   (position-token->syntax `(lox-define-var ,name ,initializer) start-token end-token))
 
 (define (expression)
-  (position-token->syntax 1 (previous) (peek)))
+  (assignment))
+
+(define (assignment)
+  (define start-token (previous))
+  (if (match? 'EQUAL)
+    (let ((value (assignment)))
+             (position-token->syntax `(lox-define-var ,start-token ,value)))
+      start-token))
 
 (define (statement)
   (cond
@@ -64,11 +70,15 @@
   (define end-token (consume 'SEMICOLON "Expect ';' after value."))
   (position-token->syntax `(lox-print ,value) start-token end-token))
 
+(define (primary)
+  (cond
+    [(match? 'NUMBER) (let ((token (previous))) 
+                        (position-token->syntax `(lox-number ,(token-value (position-token-token token))) token token))]))
+
 (define (parse tokens)
   (set! _tokens tokens)
-  (displayln tokens)
   (parse-impl)
-  statements)
+  `#(lox-program ,statements))
 
 (define (match? types)
   (cond
@@ -83,17 +93,15 @@
     (raise token-type)))
 
 (define (check? token-type)
-
-  (displayln (position-token-token (peek)))
   (if (is-at-end)
     #f
-    (eqv? (position-token-token (peek)) token-type)))
+    (eqv-token-type? (peek) token-type)))
 
 (define (check-next? token-type)
   (cond
     [(is-at-end) #f]
     [(is-eof? (list-ref _tokens (+ _current 1))) #f]
-    [(eqv? (position-token-token (list-ref _tokens (+ _current 1))) token-type)]))
+    [else (eqv-token-type? (list-ref _tokens (+ _current 1)) token-type)]))
 
 (define (advance)
   (if (is-at-end)
@@ -110,8 +118,13 @@
   (list-ref _tokens (- _current 1)))
 
 (define (is-eof? t)
-  (eqv? (position-token-token t) 'EOF))
+  (eqv-token-type? t 'EOF))
 
-(trace match? position-token->syntax declaration varDeclaration consume)
+(define (eqv-token-type? position-token type)
+  (define token (position-token-token position-token))
+  (define tt (if (token? token) (token-name token) token))
+  (eqv? tt type)) 
 
-(provide parse)
+; (trace match? check? varDeclaration assignment expression position-token->syntax)
+
+(provide parse eqv-token-type?)
