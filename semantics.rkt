@@ -32,8 +32,12 @@
             (hash-set! (state-environment _state) name val)
             val)]))
 
+(define-syntax-rule (lox-grouping a)
+  a)
+
 (define-syntax lox-program
   (syntax-rules ()
+    [(lox-program (a ...)) (begin a ...)]
     [(lox-program a) a]
     [(lox-program a ...) (begin a ...)]))
 
@@ -116,5 +120,6 @@
          lox-negate
          lox-negate-impl
          lox-number
+         lox-grouping
          lox-string)
 

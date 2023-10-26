@@ -17,11 +17,6 @@
 (define (position-token->syntax val start-pos end-pos)
   (datum->syntax #f val (positions->srcloc start-pos end-pos)))
 
-(define (get-tokens l)
-  (define (get-tokens-inner source)
-    (let [(t (l))] (if (eof-object? t) source (cons t (get-tokens-inner)))))
-  (reverse (get-tokens-inner '())))
-
 ; (lambda (tok-ok? tok-name tok-value start-pos end-pos)
 (define (raise-parse-error tok-ok? tok-name tok-value start-pos end-pos)
   (cond
@@ -95,4 +90,4 @@
              [(IDENTIFIER) (position-token->syntax `(lox-var-value ,$1) $1-start-pos $1-end-pos)]]
     ]))
 
-(provide lox-parser get-tokens)
+(provide lox-parser)
