@@ -42,13 +42,16 @@
     [(lox-declarations a) a]
     [(lox-declarations a ...) (begin a ...)]))
 
-(define-syntax-rule (lox-block a ...)
-  (begin 
-    (define previous (state-environment _state))
-    (set-state-environment! _state (hash-copy previous))
-    a ...
-    (set-state-environment! _state previous)))
+(define-syntax lox-if
+  (syntax-rules ()
+    [(lox-if a b c) (if a b c)]
+    [(lox-if a b) (when a b)]))
 
+(define-syntax-rule (lox-block a ...)
+  (let
+    [(_state (hash-copy (state-environment _state)))] 
+    a ...))
+    
 (define (lox-print value)
   (cond
    [(boolean? value) (print-bool value)]
@@ -116,5 +119,6 @@
          lox-negate
          lox-negate-impl
          lox-number
-         lox-string)
+         lox-string
+         lox-if)
 

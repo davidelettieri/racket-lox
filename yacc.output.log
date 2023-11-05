@@ -4,11 +4,13 @@
 %token LEXER_ERROR
 %left  'PLUS' 'MINUS'
 %left  'STAR' 'SLASH'
+%nonassoc  'RIGHT_PAREN'
+%nonassoc  'ELSE'
 %start (program)
 %%
 program: 
-| error program 
 | declaration program 
+| error program 
 ;
 declaration: varDecl 
 | statement 
@@ -17,8 +19,12 @@ varDecl: 'VAR' IDENTIFIER 'SEMICOLON'
 | 'VAR' IDENTIFIER 'EQUAL' expression 'SEMICOLON' 
 ;
 statement: exprStmt 
+| ifStmt 
 | printStmt 
 | block 
+;
+ifStmt: 'IF' 'LEFT_PAREN' expression 'RIGHT_PAREN' statement 
+| 'IF' 'LEFT_PAREN' expression 'RIGHT_PAREN' statement 'ELSE' statement 
 ;
 block: 'LEFT_BRACE' declarations 'RIGHT_BRACE' 
 ;

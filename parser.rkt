@@ -51,23 +51,28 @@
    ; precs clause go from lowest to highest priority
    ; tokens at the same level share the same priority
    [precs (left PLUS MINUS)
-          (left STAR SLASH)]
+          (left STAR SLASH)
+          (nonassoc RIGHT_PAREN)
+          (nonassoc ELSE)]
    [debug "debug.log"]
    [yacc-output "yacc.output.log"]
    [grammar
     [program [() (void)]
-             [(error program) $2]
-             [(declaration program) `(lox-program ,$1 ,$2)]]
+             [(declaration program) `(lox-program ,$1 ,$2)]
+             [(error program) $2]]
     [declaration [(varDecl) $1]
                  [(statement) $1]]
     [varDecl [(VAR IDENTIFIER SEMICOLON) (position-token->syntax `(lox-define-var ,$2 lox-nil) $1-start-pos $3-end-pos)]
              [(VAR IDENTIFIER EQUAL expression SEMICOLON) (position-token->syntax `(lox-define-var ,$2 ,$4) $1-start-pos $5-end-pos)]]
     [statement [(exprStmt) $1]
+               [(ifStmt) $1]
                [(printStmt) $1]
                [(block) $1]]
+    [ifStmt [(IF LEFT_PAREN expression RIGHT_PAREN statement) (position-token->syntax `(lox-if ,$3 ,$5) $1-start-pos $5-end-pos)]
+            [(IF LEFT_PAREN expression RIGHT_PAREN statement ELSE statement) (position-token->syntax `(lox-if ,$3 ,$5 ,$7) $1-start-pos $7-end-pos)]]
     [block [(LEFT_BRACE declarations RIGHT_BRACE) (position-token->syntax `(lox-block ,$2) $1-start-pos $3-end-pos)]]
     [declarations [() (void)]
-                [(declaration declarations) (position-token->syntax `(lox-declarations ,$1 ,$2) $1-start-pos $2-end-pos)]]
+                  [(declaration declarations) (position-token->syntax `(lox-declarations ,$1 ,$2) $1-start-pos $2-end-pos)]]
     [exprStmt [(expression SEMICOLON) $1]]
     [printStmt [(PRINT expression SEMICOLON) (position-token->syntax `(lox-print ,$2) $1-start-pos $3-end-pos)]]
     ; expression     → equality ;
