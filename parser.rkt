@@ -2,6 +2,7 @@
 
 (require parser-tools/yacc
          parser-tools/lex
+         racket/match
          "lexer.rkt")
 
 ; (struct srcloc (source line column position span))
@@ -22,14 +23,23 @@
     (let [(t (l))] (if (eof-object? t) source (cons t (get-tokens-inner)))))
   (reverse (get-tokens-inner '())))
 
+(define (pretty-print-token t)
+  (match t
+    ['THIS "this"]
+    ['NIL "nil"]
+    ['FALSE "false"]))
+
 ; (lambda (tok-ok? tok-name tok-value start-pos end-pos)
-(define (raise-parse-error tok-ok? tok-name tok-value start-pos end-pos)
-  (cond
-    [(not tok-ok?) (raise-user-error "unexpected token")]
-    [(eqv? tok-name 'EQUAL) (raise-user-error (format "[line ~a] Error at '=': Invalid assignment target." (position-line start-pos)))]
-    [(eqv? tok-name 'DOT) (raise-user-error (format "[line ~a] Error at '.': Expect expression." (position-line start-pos)))]
-    [(eqv? tok-name 'SEMICOLON) (raise-user-error (format "[line ~a] Error at ';': Expect expression." (position-line start-pos)))]
-    [else (begin (println (list tok-ok? tok-name tok-value start-pos end-pos)) (raise-user-error "t"))]))
+(define (raise-parse-error tok-ok? tok-name tok-value start-pos end-pos #:stack stack)
+  (let [(s (car (car stack)))]
+    (cond
+      [(not tok-ok?) (raise-user-error "unexpected token")]
+      [(eqv? s 29) (raise-user-error (format "[line ~a] Error at '~a': Expect variable name." (position-line start-pos) (pretty-print-token tok-name)))]
+      [(eqv? tok-name 'EQUAL) (raise-user-error (format "[line ~a] Error at '=': Invalid assignment target." (position-line start-pos)))]
+      [(eqv? tok-name 'DOT) (raise-user-error (format "[line ~a] Error at '.': Expect expression." (position-line start-pos)))]
+      [(eqv? tok-name 'SEMICOLON) (raise-user-error (format "[line ~a] Error at ';': Expect expression." (position-line start-pos)))]
+      [(and (eqv? tok-name 'LEXER_ERROR) (equal? tok-value "\"")) (raise-user-error (format "[line ~a] Error: Unterminated string." (position-line start-pos)))]
+      [else (begin (println (list tok-ok? tok-name tok-value start-pos end-pos (car stack))) (raise-user-error "t"))])))
 
 (define lox-parser
   (parser
@@ -42,10 +52,11 @@
    ; tokens at the same level share the same priority
    [precs (left PLUS MINUS)
           (left STAR SLASH)]
-   ;  [debug "debug.log"]
-   ;  [yacc-output "yacc.output.log"]
+   [debug "debug.log"]
+   [yacc-output "yacc.output.log"]
    [grammar
     [program [() (void)]
+             [(error program) $2]
              [(declaration program) `(lox-program ,$1 ,$2)]]
     [declaration [(varDecl) $1]
                  [(statement) $1]]
@@ -92,7 +103,6 @@
              [(FALSE) (position-token->syntax #f $1-start-pos $1-end-pos)]
              [(NIL) (position-token->syntax `lox-nil $1-start-pos $1-end-pos)]
              [(LEFT_PAREN expression RIGHT_PAREN) (position-token->syntax $2 $1-start-pos $3-end-pos)]
-             [(IDENTIFIER) (position-token->syntax `(lox-var-value ,$1) $1-start-pos $1-end-pos)]]
-    ]))
+             [(IDENTIFIER) (position-token->syntax `(lox-var-value ,$1) $1-start-pos $1-end-pos)]]]))
 
 (provide lox-parser get-tokens)

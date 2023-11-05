@@ -1,0 +1,67 @@
+%token NUMBER
+%token STRING
+%token IDENTIFIER
+%token LEXER_ERROR
+%left  'PLUS' 'MINUS'
+%left  'STAR' 'SLASH'
+%start (program)
+%%
+program: 
+| error program 
+| declaration program 
+;
+declaration: varDecl 
+| statement 
+;
+varDecl: 'VAR' IDENTIFIER 'SEMICOLON' 
+| 'VAR' IDENTIFIER 'EQUAL' expression 'SEMICOLON' 
+;
+statement: exprStmt 
+| printStmt 
+| block 
+;
+block: 'LEFT_BRACE' declarations 'RIGHT_BRACE' 
+;
+declarations: 
+| declaration declarations 
+;
+exprStmt: expression 'SEMICOLON' 
+;
+printStmt: 'PRINT' expression 'SEMICOLON' 
+;
+expression: assignment 
+;
+assignment: IDENTIFIER 'EQUAL' assignment 
+| equality 
+;
+equality: comparison 'BANG_EQUAL' comparison 
+| comparison 'EQUAL_EQUAL' comparison 
+| comparison 
+;
+comparison: term 'GREATER' term 
+| term 'GREATER_EQUAL' term 
+| term 'LESS' term 
+| term 'LESS_EQUAL' term 
+| term 
+;
+term: factor 'PLUS' term 
+| factor 'MINUS' term 
+| factor 
+;
+factor: unary 'STAR' unary 
+| unary 'SLASH' unary 
+| unary 
+;
+unary: 'BANG' unary 
+| 'MINUS' unary 
+| primary 
+;
+primary: NUMBER 
+| STRING 
+| 'TRUE' 
+| 'FALSE' 
+| 'NIL' 
+| 'LEFT_PAREN' expression 'RIGHT_PAREN' 
+| IDENTIFIER 
+;
+%%
