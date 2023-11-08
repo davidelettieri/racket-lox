@@ -1,5 +1,5 @@
-0	g1096552	=	(g1096553)
-1	g1096553	=	(program EOF)
+0	g2763	=	(g2764)
+1	g2764	=	(program EOF)
 2	program	=	()
 3	program	=	(declaration program)
 4	program	=	(error program)
@@ -46,7 +46,7 @@
 45	primary	=	(LEFT_PAREN expression RIGHT_PAREN)
 46	primary	=	(IDENTIFIER)
 State 0
-	g1096552 -> . g1096553 
+	g2763 -> . g2764 
 
 	IF					shift	27
 	VAR					shift	31
@@ -69,9 +69,9 @@ State 0
 	FALSE					shift	26
 	BANG					shift	25
 	program					goto	2
-	g1096553					goto	1
 	ifStmt					goto	6
 	statement					goto	5
+	g2764					goto	1
 	STRING					shift	20
 	assignment					goto	11
 	NUMBER					shift	19
@@ -82,11 +82,11 @@ State 0
 	varDecl					goto	4
 
 State 1
-	g1096552 -> g1096553 . 
+	g2763 -> g2764 . 
 
 
 State 2
-	g1096553 -> program . EOF 
+	g2764 -> program . EOF 
 
 	EOF					accept	
 
@@ -594,7 +594,7 @@ State 31
 	IDENTIFIER					shift	55
 
 State 32
-	g1096553 -> program EOF . 
+	g2764 -> program EOF . 
 
 
 State 33

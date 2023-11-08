@@ -16,6 +16,6 @@
        #'(module anything racket
            (require racket-lox/semantics)
            (define (main)
-              (displayln (quote result))
+              result
               (void))
            (main))))))

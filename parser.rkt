@@ -34,7 +34,7 @@
   (let [(s (car (car stack)))]
     (cond
       [(not tok-ok?) (raise-user-error "unexpected token")]
-      [(eqv? s 29) (raise-user-error (format "[line ~a] Error at '~a': Expect variable name." (position-line start-pos) (pretty-print-token tok-name)))]
+      [(eqv? s 31) (raise-user-error (format "[line ~a] Error at '~a': Expect variable name." (position-line start-pos) (pretty-print-token tok-name)))]
       [(eqv? tok-name 'EQUAL) (raise-user-error (format "[line ~a] Error at '=': Invalid assignment target." (position-line start-pos)))]
       [(eqv? tok-name 'DOT) (raise-user-error (format "[line ~a] Error at '.': Expect expression." (position-line start-pos)))]
       [(eqv? tok-name 'SEMICOLON) (raise-user-error (format "[line ~a] Error at ';': Expect expression." (position-line start-pos)))]
