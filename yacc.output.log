@@ -8,9 +8,8 @@
 %nonassoc  'ELSE'
 %start (program)
 %%
-program: 
-| declaration program 
-| error program 
+program: declarations 
+| error declarations 
 ;
 declaration: varDecl 
 | statement 

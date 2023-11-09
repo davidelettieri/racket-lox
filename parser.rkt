@@ -34,7 +34,7 @@
   (let [(s (car (car stack)))]
     (cond
       [(not tok-ok?) (raise-user-error "unexpected token")]
-      [(eqv? s 31) (raise-user-error (format "[line ~a] Error at '~a': Expect variable name." (position-line start-pos) (pretty-print-token tok-name)))]
+      [(eqv? s 32) (raise-user-error (format "[line ~a] Error at '~a': Expect variable name." (position-line start-pos) (pretty-print-token tok-name)))]
       [(eqv? tok-name 'EQUAL) (raise-user-error (format "[line ~a] Error at '=': Invalid assignment target." (position-line start-pos)))]
       [(eqv? tok-name 'DOT) (raise-user-error (format "[line ~a] Error at '.': Expect expression." (position-line start-pos)))]
       [(eqv? tok-name 'SEMICOLON) (raise-user-error (format "[line ~a] Error at ';': Expect expression." (position-line start-pos)))]
@@ -57,9 +57,8 @@
    [debug "debug.log"]
    [yacc-output "yacc.output.log"]
    [grammar
-    [program [() (void)]
-             [(declaration program) `(lox-program ,$1 ,$2)]
-             [(error program) $2]]
+    [program [(declarations) $1]
+             [(error declarations) $2]]
     [declaration [(varDecl) $1]
                  [(statement) $1]]
     [varDecl [(VAR IDENTIFIER SEMICOLON) (position-token->syntax `(lox-define-var ,$2 lox-nil) $1-start-pos $3-end-pos)]
@@ -72,7 +71,7 @@
             [(IF LEFT_PAREN expression RIGHT_PAREN statement ELSE statement) (position-token->syntax `(lox-if ,$3 ,$5 ,$7) $1-start-pos $7-end-pos)]]
     [block [(LEFT_BRACE declarations RIGHT_BRACE) (position-token->syntax `(lox-block ,$2) $1-start-pos $3-end-pos)]]
     [declarations [() (void)]
-                  [(declaration declarations) (position-token->syntax `(lox-declarations ,$1 ,$2) $1-start-pos $2-end-pos)]]
+                  [(declaration declarations) (position-token->syntax `(cons ,$1 ,$2) $1-start-pos $2-end-pos)]]
     [exprStmt [(expression SEMICOLON) $1]]
     [printStmt [(PRINT expression SEMICOLON) (position-token->syntax `(lox-print ,$2) $1-start-pos $3-end-pos)]]
     ; expression     → equality ;

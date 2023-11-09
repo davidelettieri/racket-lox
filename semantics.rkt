@@ -2,24 +2,24 @@
 
 (require (for-syntax racket/base racket/syntax))
 
-(struct state (environment) #:mutable)
+(struct lox-state (environment) #:mutable #:transparent)
 
-(define _state (state (make-hash)))
+(define _state (lox-state (make-hash)))
 
 (define-syntax-rule (lox-define-var name value)
-  (hash-set! (state-environment _state) name value))
+  (hash-set! (lox-state-environment _state) name value))
 
 (define lox-nil 'nil)
 
 (define-syntax (lox-var-value stx)
   (syntax-case stx ()
     [(_ name)
-     #'(hash-ref (state-environment _state) name (lambda () (lox-runtime-error (format "Undefined variable '~a'." name) (syntax-line #'name))))]))
+     #'(hash-ref (lox-state-environment _state) name (lambda () (lox-runtime-error (format "Undefined variable '~a'." name) (syntax-line #'name))))]))
 
 (define stderr (open-output-file "/dev/stderr" #:exists 'append))
 
 (define (lox-runtime-error message line)
-  (begin 
+  (begin
     (displayln message stderr)
     (displayln (format "[line ~a] in script" line) stderr)
     (exit 70)))
@@ -27,20 +27,10 @@
 (define-syntax (lox-assignment stx)
   (syntax-case stx ()
     [(_ name val)
-        #'(begin 
-            (hash-ref (state-environment _state) name (lambda () (lox-runtime-error (format "Undefined variable '~a'." name) (syntax-line #'name))))
-            (hash-set! (state-environment _state) name val)
-            val)]))
-
-(define-syntax lox-program
-  (syntax-rules ()
-    [(lox-program a) a]
-    [(lox-program a ...) (begin a ...)]))
-
-(define-syntax lox-declarations
-  (syntax-rules ()
-    [(lox-declarations a) a]
-    [(lox-declarations a ...) (begin a ...)]))
+     #'(begin
+         (hash-ref (lox-state-environment _state) name (lambda () (lox-runtime-error (format "Undefined variable '~a'." name) (syntax-line #'name))))
+         (hash-set! (lox-state-environment _state) name val)
+         val)]))
 
 (define-syntax lox-if
   (syntax-rules ()
@@ -48,15 +38,17 @@
     [(lox-if a b) (when a b)]))
 
 (define-syntax-rule (lox-block a ...)
-  (let
-    [(_state (hash-copy (state-environment _state)))] 
-    a ...))
-    
+  (let () 
+    (define previous (lox-state-environment _state))
+    (set-lox-state-environment! _state (hash-copy previous))
+    a ...
+    (set-lox-state-environment! _state previous)))
+
 (define (lox-print value)
   (cond
-   [(boolean? value) (print-bool value)]
-   [(eqv? value 'nil) (displayln "nil")]
-   [else (displayln value)]))
+    [(boolean? value) (print-bool value)]
+    [(eqv? value 'nil) (displayln "nil")]
+    [else (displayln value)]))
 
 (define (print-bool value)
   (displayln (if value "true" "false")))
@@ -100,11 +92,9 @@
 (define-syntax-rule (lox-number n) n)
 
 (provide lox-define-var
-         lox-program
          lox-assignment
          lox-var-value
          lox-print
-         lox-declarations
          lox-block
          lox-nil
          lox-add

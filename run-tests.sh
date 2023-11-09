@@ -1,2 +1,2 @@
 cd craftinginterpreters
-dart tool/bin/test.dart chap09_control --interpreter racket --arguments ../lox.rkt
+dart tool/bin/test.dart chap08_statements --interpreter racket
