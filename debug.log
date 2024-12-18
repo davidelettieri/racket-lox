@@ -1,5 +1,5 @@
-0	g219824	=	(g219825)
-1	g219825	=	(program EOF)
+0	g68376	=	(g68377)
+1	g68377	=	(program EOF)
 2	program	=	(declarations)
 3	program	=	(error declarations)
 4	declaration	=	(varDecl)
@@ -13,7 +13,7 @@
 12	ifStmt	=	(IF LEFT_PAREN expression RIGHT_PAREN statement)
 13	ifStmt	=	(IF LEFT_PAREN expression RIGHT_PAREN statement ELSE statement)
 14	block	=	(LEFT_BRACE declarations RIGHT_BRACE)
-15	declarations	=	()
+15	declarations	=	(declaration)
 16	declarations	=	(declaration declarations)
 17	exprStmt	=	(expression SEMICOLON)
 18	printStmt	=	(PRINT expression SEMICOLON)
@@ -45,52 +45,52 @@
 44	primary	=	(LEFT_PAREN expression RIGHT_PAREN)
 45	primary	=	(IDENTIFIER)
 State 0
-	g219824 -> . g219825 
+	g68376 -> . g68377 
 
 	declarations					goto	8
+	IF					shift	28
+	g68377					goto	1
 	VAR					shift	32
 	TRUE					shift	31
-	comparison					goto	14
-	MINUS					shift	25
-	unary					goto	17
-	LEFT_PAREN					shift	23
-	IDENTIFIER					shift	22
-	program					goto	2
-	BANG					shift	26
-	ifStmt					goto	6
-	assignment					goto	12
-	declaration					goto	3
-	NUMBER					shift	20
-	expression					goto	11
-	IF					shift	28
 	equality					goto	13
 	block					goto	7
-	printStmt					goto	10
+	MINUS					shift	25
 	exprStmt					goto	9
-	factor					goto	16
+	printStmt					goto	10
+	comparison					goto	14
 	LEFT_BRACE					shift	24
+	factor					goto	16
+	LEFT_PAREN					shift	23
+	unary					goto	17
+	IDENTIFIER					shift	22
 	NIL					shift	29
 	error					shift	19
-	EOF					reduce	15
 	primary					goto	18
 	FALSE					shift	27
+	BANG					shift	26
+	program					goto	2
+	ifStmt					goto	6
 	statement					goto	5
 	STRING					shift	21
-	g219825					goto	1
-	term					goto	15
+	assignment					goto	12
+	NUMBER					shift	20
+	declaration					goto	3
 	PRINT					shift	30
+	expression					goto	11
+	term					goto	15
 	varDecl					goto	4
 
 State 1
-	g219824 -> g219825 . 
+	g68376 -> g68377 . 
 
 
 State 2
-	g219825 -> program . EOF 
+	g68377 -> program . EOF 
 
 	EOF					accept	
 
 State 3
+	declarations -> declaration . 
 	declarations -> declaration . declarations 
 
 	declarations					goto	34
@@ -360,7 +360,6 @@ State 19
 	unary					goto	17
 	IDENTIFIER					shift	22
 	NIL					shift	29
-	EOF					reduce	15
 	primary					goto	18
 	FALSE					shift	27
 	BANG					shift	26
@@ -368,8 +367,8 @@ State 19
 	statement					goto	5
 	STRING					shift	21
 	assignment					goto	12
-	NUMBER					shift	20
 	declaration					goto	3
+	NUMBER					shift	20
 	PRINT					shift	30
 	expression					goto	11
 	term					goto	15
@@ -472,13 +471,12 @@ State 24
 	statement					goto	5
 	STRING					shift	21
 	assignment					goto	12
-	NUMBER					shift	20
 	declaration					goto	3
+	NUMBER					shift	20
 	PRINT					shift	30
 	expression					goto	11
 	term					goto	15
 	varDecl					goto	4
-	RIGHT_BRACE					reduce	15
 
 State 25
 	unary -> MINUS . unary 
@@ -592,7 +590,7 @@ State 32
 	IDENTIFIER					shift	55
 
 State 33
-	g219825 -> program EOF . 
+	g68377 -> program EOF . 
 
 
 State 34

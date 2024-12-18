@@ -1,20 +1,22 @@
 #lang racket
 
+(require racket/syntax)
 (require (for-syntax racket/base racket/syntax))
 
 (struct lox-state (environment) #:mutable #:transparent)
 
 (define _state (lox-state (make-hash)))
 
-(define-syntax-rule (lox-define-var name value)
-  (hash-set! (lox-state-environment _state) name value))
+(define-syntax (lox-define-var stx)
+  (syntax-case stx ()
+    [(_ name val)
+     (with-syntax ([_name (format-id #'name "~a" #'name)])
+       (syntax (define _name val)))]))
 
 (define lox-nil 'nil)
 
-(define-syntax (lox-var-value stx)
-  (syntax-case stx ()
-    [(_ name)
-     #'(hash-ref (lox-state-environment _state) name (lambda () (lox-runtime-error (format "Undefined variable '~a'." name) (syntax-line #'name))))]))
+(define-syntax-rule (lox-var-value name)
+  name)
 
 (define stderr (open-output-file "/dev/stderr" #:exists 'append))
 
@@ -27,10 +29,8 @@
 (define-syntax (lox-assignment stx)
   (syntax-case stx ()
     [(_ name val)
-     #'(begin
-         (hash-ref (lox-state-environment _state) name (lambda () (lox-runtime-error (format "Undefined variable '~a'." name) (syntax-line #'name))))
-         (hash-set! (lox-state-environment _state) name val)
-         val)]))
+     (with-syntax ([_name (format-id #'name "~a" #'name)])
+       (syntax (set _name val)))]))
 
 (define-syntax lox-if
   (syntax-rules ()
@@ -38,7 +38,7 @@
     [(lox-if a b) (when a b)]))
 
 (define-syntax-rule (lox-block a ...)
-  (let () 
+  (let ()
     (define previous (lox-state-environment _state))
     (set-lox-state-environment! _state (hash-copy previous))
     a ...
@@ -79,6 +79,15 @@
       (syntax-case stx ()
         [(_ a b) (syntax (define (impl-id a b) (op a b)))
                  (syntax (if (and (number? a) (number? b)) (op a b) (lox-runtime-error "Operands must be numbers." line)))]))))
+
+; (define-syntax-rule (lox-declarations head rest)
+;   (syntax head rest))
+
+; (define-syntax (lox-declarations stx)
+;   (with-syntax ([line (syntax-line stx)])
+;     (syntax-case stx ()
+;       [(_ head) (syntax head)]
+;       [(_ head rest) (syntax->list head rest)])))
 
 (lox-binary-number-op lox-divide /)
 (lox-binary-number-op lox-multiply *)

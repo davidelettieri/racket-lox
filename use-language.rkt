@@ -1,2 +1,2 @@
 #lang racket-lox
-var this = "value";
+var a = "a";

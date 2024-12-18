@@ -27,7 +27,7 @@ ifStmt: 'IF' 'LEFT_PAREN' expression 'RIGHT_PAREN' statement
 ;
 block: 'LEFT_BRACE' declarations 'RIGHT_BRACE' 
 ;
-declarations: 
+declarations: declaration 
 | declaration declarations 
 ;
 exprStmt: expression 'SEMICOLON' 
