@@ -33,7 +33,7 @@
   (syntax-case stx ()
     [(_ name val)
      (with-syntax ([_name (format-id #'name "~a" #'name)])
-       (syntax (set _name val)))]))
+       (syntax (let ((x val)) (set! _name x) x)))]))
 
 (define-syntax lox-if
   (syntax-rules ()
@@ -86,10 +86,8 @@
 ; (define-syntax-rule (lox-declarations head rest)
 ;   (syntax head rest))
 
-(define-syntax (lox-declarations stx)
-  (with-syntax ([line (syntax-line stx)])
-    (syntax-case stx ()
-      [(_ head ...) (syntax (begin head ...))])))
+(define-syntax-rule (lox-declarations head ...)
+  (begin head ...))
 
 (lox-binary-number-op lox-divide /)
 (lox-binary-number-op lox-multiply *)
