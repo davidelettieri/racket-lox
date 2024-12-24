@@ -15,10 +15,13 @@
 
 (define lox-nil 'nil)
 
-(define-syntax-rule (lox-var-value name)
-  name)
+(define-syntax (lox-var-value stx)
+  (syntax-case stx ()
+    [(_ name)
+     (with-syntax ([_name (format-id #'name "~a" #'name)])
+       (syntax _name))]))
 
-(define stderr (open-output-file "/dev/stderr" #:exists 'append))
+(define stderr (open-output-file "c:\\temp\\err" #:exists 'append))
 
 (define (lox-runtime-error message line)
   (begin
@@ -83,11 +86,10 @@
 ; (define-syntax-rule (lox-declarations head rest)
 ;   (syntax head rest))
 
-; (define-syntax (lox-declarations stx)
-;   (with-syntax ([line (syntax-line stx)])
-;     (syntax-case stx ()
-;       [(_ head) (syntax head)]
-;       [(_ head rest) (syntax->list head rest)])))
+(define-syntax (lox-declarations stx)
+  (with-syntax ([line (syntax-line stx)])
+    (syntax-case stx ()
+      [(_ head ...) (syntax (begin head ...))])))
 
 (lox-binary-number-op lox-divide /)
 (lox-binary-number-op lox-multiply *)
@@ -119,5 +121,6 @@
          lox-negate-impl
          lox-number
          lox-string
-         lox-if)
+         lox-if
+         lox-declarations)
 
