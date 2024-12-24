@@ -7,7 +7,7 @@ def replaceLine(m):
 print("Searching files...")
 for f in glob.glob('craftinginterpreters/test/**/*.lox', recursive=True):
     print("Updating",f)
-    with open(f, "r+") as h:
+    with open(f, "r+", encoding= "UTF8") as h:
         content = h.read()
         updatedContent = re.sub(r"\[(java line|line) (\d+)\]", replaceLine, content)
         h.seek(0,0)
