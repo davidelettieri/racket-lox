@@ -35,6 +35,12 @@
      (with-syntax ([_name (format-id #'name "~a" #'name)])
        (syntax (let ((x val)) (set! _name x) x)))]))
 
+(define (lox-eqv? a b)
+  (cond
+    [(nan? a) #f]
+    [(nan? b) #f]
+    [else (eqv? a b)]))
+
 (define-syntax lox-if
   (syntax-rules ()
     [(lox-if a b c) (if a b c)]
@@ -120,5 +126,6 @@
          lox-number
          lox-string
          lox-if
-         lox-declarations)
+         lox-declarations
+         lox-eqv?)
 
