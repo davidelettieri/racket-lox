@@ -6,7 +6,7 @@
   (provide (rename-out [my-read read]
                        [my-read-syntax read-syntax]))
 
-  (define stderr (open-output-file "c:\\temp\\err" #:exists 'append))
+  (define stderr (open-output-file "/dev/stderr" #:exists 'append))
 
   (define (my-read in)
     (syntax->datum

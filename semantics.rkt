@@ -21,7 +21,7 @@
      (with-syntax ([_name (format-id #'name "~a" #'name)])
        (syntax _name))]))
 
-(define stderr (open-output-file "c:\\temp\\err" #:exists 'append))
+(define stderr (open-output-file "/dev/stderr" #:exists 'append))
 
 (define (lox-runtime-error message line)
   (begin
