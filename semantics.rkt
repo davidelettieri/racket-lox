@@ -27,6 +27,9 @@
 
 (define stderr (open-output-file "/dev/stderr" #:exists 'append))
 
+(define-syntax-rule (lox-empty-program)
+  (void))
+
 (define (lox-runtime-error message line)
   (begin
     (displayln message stderr)
@@ -132,5 +135,6 @@
          lox-string
          lox-if
          lox-declarations
-         lox-eqv?)
+         lox-eqv?
+         lox-empty-program)
 

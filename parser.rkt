@@ -57,7 +57,8 @@
   ;  [debug "debug.log"]
   ;  [yacc-output "yacc.output.log"]
    [grammar
-    [program [(declarations) $1]
+    [program [() #'(lox-empty-program)]
+             [(declarations) $1]
              [(error declarations) $2]]
     [declaration [(varDecl) $1]
                  [(statement) $1]]
