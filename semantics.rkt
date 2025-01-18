@@ -7,19 +7,23 @@
 
 (define _state (lox-state (make-hash)))
 
-(define-syntax (lox-define-var stx)
-  (syntax-case stx ()
-    [(_ name val)
-     (with-syntax ([_name (format-id #'name "~a" #'name)])
-       (syntax (define _name val)))]))
+(define-syntax-rule (lox-define-var name value)
+  (hash-set! (lox-state-environment _state) name value))
+
+; (define-syntax (lox-define-var stx)
+;   (syntax-case stx ()
+;     [(_ name val)
+;      (with-syntax ([_name (format-id #'name "~a" #'name)])
+;        (syntax (define _name val)))]))
 
 (define lox-nil 'nil)
 
 (define-syntax (lox-var-value stx)
   (syntax-case stx ()
     [(_ name)
-     (with-syntax ([_name (format-id #'name "~a" #'name)])
-       (syntax _name))]))
+      #'(hash-ref (lox-state-environment _state) name (lambda () (lox-runtime-error (format "Undefined variable '~a'." name) (syntax-line #'name))))]))
+    ;  (with-syntax ([_name (format-id #'name "~a" #'name)])
+    ;    (syntax _name))]))
 
 (define stderr (open-output-file "/dev/stderr" #:exists 'append))
 
@@ -32,13 +36,17 @@
 (define-syntax (lox-assignment stx)
   (syntax-case stx ()
     [(_ name val)
-     (with-syntax ([_name (format-id #'name "~a" #'name)])
-       (syntax (let ((x val)) (set! _name x) x)))]))
+      #'(begin
+      (hash-ref (lox-state-environment _state) name (lambda () (lox-runtime-error (format "Undefined variable '~a'." name) (syntax-line #'name))))
+      (hash-set! (lox-state-environment _state) name val)
+      val)]))
+    ;  (with-syntax ([_name (format-id #'name "~a" #'name)])
+    ;    (syntax (let ((x val)) (set! _name x) x)))]))
 
 (define (lox-eqv? a b)
   (cond
-    [(nan? a) #f]
-    [(nan? b) #f]
+    [(and (real? a) (nan? a)) #f]
+    [(and (real? b) (nan? b)) #f]
     [else (eqv? a b)]))
 
 (define-syntax lox-if
@@ -88,9 +96,6 @@
       (syntax-case stx ()
         [(_ a b) (syntax (define (impl-id a b) (op a b)))
                  (syntax (if (and (number? a) (number? b)) (op a b) (lox-runtime-error "Operands must be numbers." line)))]))))
-
-; (define-syntax-rule (lox-declarations head rest)
-;   (syntax head rest))
 
 (define-syntax-rule (lox-declarations head ...)
   (begin head ...))
