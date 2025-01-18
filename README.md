@@ -3,9 +3,6 @@ racket-lox
 
 Here my **failed** attempt at implementing Lox language from crafting interpreters book as a racket language module. 
 
-
-https://docs.racket-lang.org/lex-yacc-example/index.html
-
 # racket numbers note
 
 I'm not able to control printing for racket numbers so tests for numbers value are changed with respect to crafting interpreters implementation.
