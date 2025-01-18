@@ -1,5 +1,6 @@
 #lang racket
 
+(require racket/syntax)
 (require (for-syntax racket/base racket/syntax))
 
 (struct lox-state (environment) #:mutable #:transparent)
@@ -9,14 +10,25 @@
 (define-syntax-rule (lox-define-var name value)
   (hash-set! (lox-state-environment _state) name value))
 
+; (define-syntax (lox-define-var stx)
+;   (syntax-case stx ()
+;     [(_ name val)
+;      (with-syntax ([_name (format-id #'name "~a" #'name)])
+;        (syntax (define _name val)))]))
+
 (define lox-nil 'nil)
 
 (define-syntax (lox-var-value stx)
   (syntax-case stx ()
     [(_ name)
-     #'(hash-ref (lox-state-environment _state) name (lambda () (lox-runtime-error (format "Undefined variable '~a'." name) (syntax-line #'name))))]))
+      #'(hash-ref (lox-state-environment _state) name (lambda () (lox-runtime-error (format "Undefined variable '~a'." name) (syntax-line #'name))))]))
+    ;  (with-syntax ([_name (format-id #'name "~a" #'name)])
+    ;    (syntax _name))]))
 
 (define stderr (open-output-file "/dev/stderr" #:exists 'append))
+
+(define-syntax-rule (lox-empty-program)
+  (void))
 
 (define (lox-runtime-error message line)
   (begin
@@ -27,10 +39,18 @@
 (define-syntax (lox-assignment stx)
   (syntax-case stx ()
     [(_ name val)
-     #'(begin
-         (hash-ref (lox-state-environment _state) name (lambda () (lox-runtime-error (format "Undefined variable '~a'." name) (syntax-line #'name))))
-         (hash-set! (lox-state-environment _state) name val)
-         val)]))
+      #'(begin
+      (hash-ref (lox-state-environment _state) name (lambda () (lox-runtime-error (format "Undefined variable '~a'." name) (syntax-line #'name))))
+      (hash-set! (lox-state-environment _state) name val)
+      val)]))
+    ;  (with-syntax ([_name (format-id #'name "~a" #'name)])
+    ;    (syntax (let ((x val)) (set! _name x) x)))]))
+
+(define (lox-eqv? a b)
+  (cond
+    [(and (real? a) (nan? a)) #f]
+    [(and (real? b) (nan? b)) #f]
+    [else (eqv? a b)]))
 
 (define-syntax lox-if
   (syntax-rules ()
@@ -38,7 +58,7 @@
     [(lox-if a b) (when a b)]))
 
 (define-syntax-rule (lox-block a ...)
-  (let () 
+  (let ()
     (define previous (lox-state-environment _state))
     (set-lox-state-environment! _state (hash-copy previous))
     a ...
@@ -80,6 +100,9 @@
         [(_ a b) (syntax (define (impl-id a b) (op a b)))
                  (syntax (if (and (number? a) (number? b)) (op a b) (lox-runtime-error "Operands must be numbers." line)))]))))
 
+(define-syntax-rule (lox-declarations head ...)
+  (begin head ...))
+
 (lox-binary-number-op lox-divide /)
 (lox-binary-number-op lox-multiply *)
 (lox-binary-number-op lox-subtract -)
@@ -110,5 +133,8 @@
          lox-negate-impl
          lox-number
          lox-string
-         lox-if)
+         lox-if
+         lox-declarations
+         lox-eqv?
+         lox-empty-program)
 

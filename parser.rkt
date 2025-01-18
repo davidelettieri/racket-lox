@@ -54,10 +54,11 @@
           (left STAR SLASH)
           (nonassoc RIGHT_PAREN)
           (nonassoc ELSE)]
-   [debug "debug.log"]
-   [yacc-output "yacc.output.log"]
+  ;  [debug "debug.log"]
+  ;  [yacc-output "yacc.output.log"]
    [grammar
-    [program [(declarations) $1]
+    [program [() #'(lox-empty-program)]
+             [(declarations) $1]
              [(error declarations) $2]]
     [declaration [(varDecl) $1]
                  [(statement) $1]]
@@ -70,8 +71,8 @@
     [ifStmt [(IF LEFT_PAREN expression RIGHT_PAREN statement) (position-token->syntax `(lox-if ,$3 ,$5) $1-start-pos $5-end-pos)]
             [(IF LEFT_PAREN expression RIGHT_PAREN statement ELSE statement) (position-token->syntax `(lox-if ,$3 ,$5 ,$7) $1-start-pos $7-end-pos)]]
     [block [(LEFT_BRACE declarations RIGHT_BRACE) (position-token->syntax `(lox-block ,$2) $1-start-pos $3-end-pos)]]
-    [declarations [() (void)]
-                  [(declaration declarations) (position-token->syntax `(cons ,$1 ,$2) $1-start-pos $2-end-pos)]]
+    [declarations [(declaration) (position-token->syntax $1 $1-start-pos $1-end-pos)]
+                  [(declaration declarations) (position-token->syntax `(lox-declarations ,$1 ,$2) $1-start-pos $2-end-pos)]]
     [exprStmt [(expression SEMICOLON) $1]]
     [printStmt [(PRINT expression SEMICOLON) (position-token->syntax `(lox-print ,$2) $1-start-pos $3-end-pos)]]
     ; expression     → equality ;
@@ -79,8 +80,8 @@
     [assignment [(IDENTIFIER EQUAL assignment) (position-token->syntax `(lox-assignment ,$1 ,$3) $1-start-pos $3-end-pos)]
                 [(equality) $1]]
     ; ; equality       → comparison ( ( "!=" | "==" ) comparison )* ;
-    [equality [(comparison BANG_EQUAL comparison) (position-token->syntax `(not (eqv? ,$1 ,$3)) $1-start-pos $3-end-pos)]
-              [(comparison EQUAL_EQUAL comparison) (position-token->syntax `(eqv? ,$1 ,$3) $1-start-pos $3-end-pos)]
+    [equality [(comparison BANG_EQUAL comparison) (position-token->syntax `(not (lox-eqv? ,$1 ,$3)) $1-start-pos $3-end-pos)]
+              [(comparison EQUAL_EQUAL comparison) (position-token->syntax `(lox-eqv? ,$1 ,$3) $1-start-pos $3-end-pos)]
               [(comparison) $1]]
     ; ; comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
     [comparison [(term GREATER term) (position-token->syntax `(lox-greater ,$1 ,$3) $1-start-pos $3-end-pos)]
