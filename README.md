@@ -1,6 +1,7 @@
 racket-lox
 ==========
-README text here.
+
+Here my **failed** attempt at implementing Lox language from crafting interpreters book as a racket language module. 
 
 
 https://docs.racket-lang.org/lex-yacc-example/index.html
