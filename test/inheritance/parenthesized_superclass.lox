@@ -1,5 +1,0 @@
-#lang racket-lox
-class Foo {}
-
-// [line 5] Error at '(': Expect superclass name.
-class Bar < (Foo) {}

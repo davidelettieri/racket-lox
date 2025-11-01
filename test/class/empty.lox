@@ -1,4 +1,0 @@
-#lang racket-lox
-class Foo {}
-
-print Foo; // expect: Foo

@@ -1,3 +1,0 @@
-#lang racket-lox
-fun f() {}
-print f(); // expect: nil

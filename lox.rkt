@@ -8,37 +8,63 @@
     [(_ name:id val:expr)
        (syntax (define name val))]))
 
-(provide lox-define-var)
+(define-syntax (lox-assign stx)
+  (syntax-parse stx
+    [(_ name:id val:expr)
+      #'(begin
+      (set! name val)
+      val)]))
+
+(define (lox-print value)
+  (cond
+    [(boolean? value) (print-bool value)]
+    [(eqv? value 'nil) (displayln "nil")]
+    [else (displayln value)]))
+
+(define (print-bool value)
+  (displayln (if value "true" "false")))
+
+(define-syntax (lox-add stx)
+  (with-syntax ([line (syntax-line stx)])
+    (syntax-case stx ()
+      [(_ a b) (syntax (lox-add-impl a b line))])))
+
+(define (lox-add-impl left right line)
+  (cond
+    [(and (number? left) (number? right)) (+ left right)]
+    [(and (string? left) (string? right)) (string-append left right)]
+    [else (lox-runtime-error "Operands must be two numbers or two strings." line)]))
+
+(define (lox-runtime-error message line)
+  (begin
+    (displayln message (current-error-port))
+    (displayln (format "[line ~a] in script" line) (current-error-port))
+    (exit 70)))
+
+(define-syntax (lox-var-value stx)
+  (syntax-parse stx
+    [(_ name:id)
+      (syntax name)]))
+
+(define-syntax-rule (lox-block a ...)
+  (let ()
+    a ...))
+
+(provide lox-define-var
+         lox-assign
+         lox-print
+         lox-add
+         lox-block
+         lox-var-value)
 
 ; (define lox-nil 'nil)
 
-; (define-syntax (lox-var-value stx)
-;   (syntax-case stx ()
-;     [(_ name)
-;       #'(hash-ref (lox-state-environment _state) name (lambda () (lox-runtime-error (format "Undefined variable '~a'." name) (syntax-line #'name))))]))
-;     ;  (with-syntax ([_name (format-id #'name "~a" #'name)])
-;     ;    (syntax _name))]))
 
-; (define stderr (open-output-file "/dev/stderr" #:exists 'append))
 
 ; (define-syntax-rule (lox-empty-program)
 ;   (void))
 
-; (define (lox-runtime-error message line)
-;   (begin
-;     (displayln message stderr)
-;     (displayln (format "[line ~a] in script" line) stderr)
-;     (exit 70)))
 
-; (define-syntax (lox-assignment stx)
-;   (syntax-case stx ()
-;     [(_ name val)
-;       #'(begin
-;       (hash-ref (lox-state-environment _state) name (lambda () (lox-runtime-error (format "Undefined variable '~a'." name) (syntax-line #'name))))
-;       (hash-set! (lox-state-environment _state) name val)
-;       val)]))
-;     ;  (with-syntax ([_name (format-id #'name "~a" #'name)])
-;     ;    (syntax (let ((x val)) (set! _name x) x)))]))
 
 ; (define (lox-eqv? a b)
 ;   (cond
@@ -51,32 +77,8 @@
 ;     [(lox-if a b c) (if a b c)]
 ;     [(lox-if a b) (when a b)]))
 
-; (define-syntax-rule (lox-block a ...)
-;   (let ()
-;     (define previous (lox-state-environment _state))
-;     (set-lox-state-environment! _state (hash-copy previous))
-;     a ...
-;     (set-lox-state-environment! _state previous)))
 
-; (define (lox-print value)
-;   (cond
-;     [(boolean? value) (print-bool value)]
-;     [(eqv? value 'nil) (displayln "nil")]
-;     [else (displayln value)]))
 
-; (define (print-bool value)
-;   (displayln (if value "true" "false")))
-
-; (define-syntax (lox-add stx)
-;   (with-syntax ([line (syntax-line stx)])
-;     (syntax-case stx ()
-;       [(_ a b) (syntax (lox-add-impl a b line))])))
-
-; (define (lox-add-impl left right line)
-;   (cond
-;     [(and (number? left) (number? right)) (+ left right)]
-;     [(and (string? left) (string? right)) (string-append left right)]
-;     [else (lox-runtime-error "Operands must be two numbers or two strings." line)]))
 
 ; (define-syntax (lox-negate stx)
 ;   (with-syntax ([line (syntax-line stx)])

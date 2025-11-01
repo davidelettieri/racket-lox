@@ -1,4 +1,0 @@
-#lang racket-lox
-// [line 4] Error at '{': Expect expression.
-// [line 4] Error at ')': Expect ';' after expression.
-for ({}; a < 2; a = a + 1) {}

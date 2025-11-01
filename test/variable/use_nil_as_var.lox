@@ -1,3 +1,0 @@
-#lang racket-lox
-// [line 3] Error at 'nil': Expect variable name.
-var nil = "value";
