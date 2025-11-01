@@ -1,0 +1,7 @@
+#lang racket-lox
+{
+  var a = "outer";
+  {
+    print a; // expect: outer
+  }
+}

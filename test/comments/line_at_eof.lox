@@ -1,0 +1,3 @@
+#lang racket-lox
+print "ok"; // expect: ok
+// comment

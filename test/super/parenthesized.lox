@@ -1,0 +1,11 @@
+#lang racket-lox
+class A {
+  method() {}
+}
+
+class B < A {
+  method() {
+    // [line 9] Error at ')': Expect '.' after 'super'.
+    (super).method();
+  }
+}

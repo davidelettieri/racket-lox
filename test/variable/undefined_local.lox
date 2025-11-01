@@ -1,0 +1,4 @@
+#lang racket-lox
+{
+  print notDefined;  // expect runtime error: Undefined variable 'notDefined'.
+}

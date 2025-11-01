@@ -1,0 +1,3 @@
+#lang racket-lox
+var a;
+print a; // expect: nil
