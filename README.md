@@ -12,3 +12,6 @@ I think the right racket representation for numbers is `flonums`, I'm forcing th
 > Inexact real numbers are implemented as double-precision IEEE floating-point numbers, also known as flonums
 
 [source](https://docs.racket-lang.org/reference/numbers.html#%28tech._flonum%29)
+
+
+raco test -x -p racket-lox

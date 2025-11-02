@@ -50,11 +50,30 @@
                 [(#\+) (token 'PLUS        #\+ #f line col)]
                 [(#\;) (token 'SEMICOLON   #\; #f line col)]
                 [(#\*) (token 'STAR        #\* #f line col)]
+                [(#\!) (if (match input-port #\=)
+                           (token 'BANG_EQUAL "!=" #f line col)
+                           (token 'BANG       #\!  #f line col))]
+                [(#\=) (if (match input-port #\=)
+                           (token 'EQUAL_EQUAL "==" #f line col)
+                           (token 'EQUAL       #\=  #f line col))]
+                [(#\<) (if (match input-port #\=)
+                           (token 'LESS_EQUAL "<=" #f line col)
+                           (token 'LESS       #\<  #f line col))]
+                [(#\>) (if (match input-port #\=)
+                           (token 'GREATER_EQUAL ">=" #f line col)
+                           (token 'GREATER       #\>  #f line col))]
                 ;; Ignore simple whitespace and read the next token
                 [(#\space #\tab #\newline #\return)
                 (scan-token input-port)]
                 [else
                 (error 'scan-token (format "Unexpected character: ~a at ~a:~a"
                                             c line col))]))))
+
+(define (match input-port expected)
+    (if (eqv? (peek-char input-port) expected)
+        (begin 
+            (read-char input-port)
+            #t)
+        #f))
 
 (struct token (type lexeme literal line column) #:transparent)
