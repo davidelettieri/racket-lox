@@ -1,5 +1,10 @@
 #lang racket
 
+(provide
+  scan-tokens
+  scan-token
+  (struct-out token))
+
 (define keywords 
     (hasheqv 
         "and" 'AND 
@@ -9,7 +14,7 @@
         "for" 'FOR
         "fun" 'FUN
         "if" 'IF
-        "nul" 'NIL
+        "nil" 'NIL
         "or" 'OR
         "print" 'PRINT
         "return" 'RETURN
@@ -24,16 +29,32 @@
     (scan-tokens-impl input-port '()))
 
 (define (scan-tokens-impl input-port acc)
-    (let [(current-char (peek-char input-port))]
-        (if (eof-object? current-char)
-            (reverse (cons current-char acc))
-            (scan-tokens-impl input-port (cons (read-token input-port) acc)))))
+    (let [(token (scan-token input-port))]
+        (if (eqv? 'EOF (token-type token))
+            (reverse (cons token acc))
+            (scan-tokens-impl input-port (cons token acc)))))
 
 (define (scan-token input-port)
-    (let [(c (read-char input-port))
-          (line (input-port-line input-port))
-          (column (input-port-column input-port))]
-        (case c
-            [(#\() (token 'LEFT_PAREN #\( #f line column)])))
+    (define-values (line col pos) (port-next-location input-port))
+    (let ([c (read-char input-port)])
+        (if (eof-object? c) 
+            (token 'EOF eof #f line col)
+            (case c
+                [(#\() (token 'LEFT_PAREN  #\( #f line col)]
+                [(#\)) (token 'RIGHT_PAREN #\) #f line col)]
+                [(#\{) (token 'LEFT_BRACE  #\{ #f line col)]
+                [(#\}) (token 'RIGHT_BRACE #\} #f line col)]
+                [(#\,) (token 'COMMA       #\, #f line col)]
+                [(#\.) (token 'DOT         #\. #f line col)]
+                [(#\-) (token 'MINUS       #\- #f line col)]
+                [(#\+) (token 'PLUS        #\+ #f line col)]
+                [(#\;) (token 'SEMICOLON   #\; #f line col)]
+                [(#\*) (token 'STAR        #\* #f line col)]
+                ;; Ignore simple whitespace and read the next token
+                [(#\space #\tab #\newline #\return)
+                (scan-token input-port)]
+                [else
+                (error 'scan-token (format "Unexpected character: ~a at ~a:~a"
+                                            c line col))]))))
 
 (struct token (type lexeme literal line column) #:transparent)
