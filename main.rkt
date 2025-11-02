@@ -10,4 +10,4 @@
     #'(#%plain-module-begin
        forms ...)]))
 
-(provide #%module-begin #%app #%datum #%top-interaction (all-from-out racket) (all-from-out "lox.rkt"))
+(provide #%module-begin (all-from-out racket) (all-from-out "lox.rkt"))

@@ -50,12 +50,17 @@
   (let ()
     a ...))
 
+
+(define-syntax-rule (lox-declarations head ...)
+  (begin head ...))
+
 (provide lox-define-var
          lox-assign
          lox-print
          lox-add
          lox-block
-         lox-var-value)
+         lox-var-value
+         lox-declarations)
 
 ; (define lox-nil 'nil)
 
@@ -96,8 +101,6 @@
 ;         [(_ a b) (syntax (define (impl-id a b) (op a b)))
 ;                  (syntax (if (and (number? a) (number? b)) (op a b) (lox-runtime-error "Operands must be numbers." line)))]))))
 
-; (define-syntax-rule (lox-declarations head ...)
-;   (begin head ...))
 
 ; (lox-binary-number-op lox-divide /)
 ; (lox-binary-number-op lox-multiply *)
