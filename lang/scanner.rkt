@@ -1,6 +1,7 @@
 #lang racket
 
-(require "helpers.rkt")
+(require "helpers.rkt"
+    (for-syntax syntax/parse))
 
 (provide
   scan-tokens
@@ -65,6 +66,7 @@
                            (token 'GREATER_EQUAL ">=" #f line col)
                            (token 'GREATER       #\>  #f line col))]
                 [(#\/) (handle-slash input-port line col)]
+                [(#\") (string-token input-port line col)]
                 ;; Ignore simple whitespace and read the next token
                 [(#\space #\tab #\newline #\return)
                     (scan-token input-port)]
@@ -72,13 +74,18 @@
                     (error 'scan-token (format "Unexpected character: ~a at ~a:~a"
                                             c line col))]))))
 
+(define (string-token input-port line col)
+    (define chars '())
+    (while-not-char-not-end input-port #\" (set! chars (cons (read-char input-port) chars)))
+    (when (is-at-end? input-port) (error "Unterminated string."))
+    (read-char input-port)
+    (define value (list->string (reverse chars)))
+    (token 'STRING value #f line col))
+
 (define (handle-slash input-port line col)
     (if (match input-port #\/)
         (begin 
-            (while 
-                (and 
-                    (not (eqv? (peek-char input-port) #\newline))
-                    (not (is-at-end? input-port))) (read-char input-port))
+            (while-not-char-not-end input-port #\newline (read-char input-port)) 
             (scan-token input-port))
         (token 'SLASH #\/ #f line col)))
 
@@ -92,3 +99,11 @@
         #f))
 
 (struct token (type lexeme literal line column) #:transparent)
+
+(define-syntax (while-not-char-not-end stx)
+  (syntax-parse stx
+     [(_ input-port:id c:char body:expr ...)
+      #'(while (and
+                  (not (eqv? (peek-char input-port) c))
+                  (not (is-at-end? input-port)))
+                body ...)]))

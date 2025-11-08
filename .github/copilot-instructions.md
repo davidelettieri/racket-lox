@@ -20,6 +20,7 @@ These notes capture project-specific architecture, workflows, and conventions so
 - Ignore the craftinginterpreters subfolder.
 - Validate builds:
   - `find lang -name '*.rkt' -exec raco make {} +` to compile all Racket source files.
+- Test files are all files with `-tests.rkt` suffix.
 - Run local Racket tests: `raco test -x -p racket-lox`
 - Cross-reference upstream book tests via `run-tests.sh` which executes Dart harness: `craftinginterpreters/tool/bin/test.dart chap08_statements --interpreter racket`. This expects further interpreter features; many chapters are not yet implemented here. Run this script only if directly asked.
 - When adding scanner features (identifiers, strings, numbers), mirror patterns from book and extend existing tests in `lang/scanner-tests.rkt` before implementing logic.

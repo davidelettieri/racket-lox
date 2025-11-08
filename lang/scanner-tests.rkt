@@ -77,4 +77,14 @@
 
   (test-case "slash not starting a comment is a token"
     (check-equal? (types-from-string "/=")
-                  '(SLASH EQUAL EOF))))
+                  '(SLASH EQUAL EOF)))
+
+  (test-case "scan string literal token"
+    (check-equal? (types-from-string "\"lox\"")
+                  '(STRING EOF)))
+
+  (test-case "lexeme for string literal token"
+    (define toks (scan-tokens (open-input-string "\"lox interpreter\"")))
+    (define first1 (take toks 1))
+    (check-equal? (map token-lexeme first1)
+                  (list "lox interpreter"))))
