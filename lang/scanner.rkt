@@ -82,7 +82,7 @@
             (scan-token input-port))
         (token 'SLASH #\/ #f line col)))
 
-(define (is-at-end? input-port) (eof-object? (read-char input-port)))
+(define (is-at-end? input-port) (eof-object? (peek-char input-port)))
 
 (define (match input-port expected)
     (if (eqv? (peek-char input-port) expected)
