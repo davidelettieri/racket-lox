@@ -87,4 +87,20 @@
     (define toks (scan-tokens (open-input-string "\"lox interpreter\"")))
     (define first1 (take toks 1))
     (check-equal? (map token-lexeme first1)
-                  (list "lox interpreter"))))
+                  (list "lox interpreter")))
+
+  (test-case "scan integer number literal token"
+    (check-equal? (types-from-string "123")
+                  '(NUMBER EOF)))
+
+  (test-case "lexeme and literal for integer number literal"
+    (define token (first (scan-tokens (open-input-string "123"))))
+    (check-equal? (token-lexeme token) "123")
+    (check-true (flonum? (token-literal token)))
+    (check-equal? (token-literal token) 123.0))
+
+  (test-case "lexeme and literal for floating-point number literal"
+    (define token (first (scan-tokens (open-input-string "123.45"))))
+    (check-equal? (token-lexeme token) "123.45")
+    (check-true (flonum? (token-literal token)))
+    (check-equal? (token-literal token) 123.45)))

@@ -71,8 +71,37 @@
                 [(#\space #\tab #\newline #\return)
                     (scan-token input-port)]
                 [else
-                    (error 'scan-token (format "Unexpected character: ~a at ~a:~a"
-                                            c line col))]))))
+                    (cond
+                        [(char-numeric? c) (number c input-port line col)]
+                        [(is-alphanumeric? c) (identifier c input-port line col)]
+                        [else
+                            (error 'scan-token (format "Unexpected character: ~a at ~a:~a"
+                                            c line col))])]))))
+
+(define (identifier c input-port line col)
+    (raise "Not implemented"))
+
+(define (number c input-port line col)
+    (define chars (list c))
+    (define (advance)
+        (define d (read-char input-port))
+        (set! chars (cons d chars)))
+    (define (numeric? c)
+            (and 
+                (not (eof-object? c))
+                (char-numeric? c)))
+    (while (numeric? (peek-char input-port))
+        (advance))
+    (when 
+        (and 
+            (eqv? (peek-char input-port) #\.)
+            (numeric? (peek-char input-port 1)))
+        (advance)
+        (while 
+            (numeric? (peek-char input-port))
+            (advance)))
+    (define value (list->string (reverse chars)))
+    (token 'NUMBER value (string->number (string-append "#i" value)) line col))
 
 (define (string-token input-port line col)
     (define chars '())
@@ -90,6 +119,7 @@
         (token 'SLASH #\/ #f line col)))
 
 (define (is-at-end? input-port) (eof-object? (peek-char input-port)))
+(define (is-alphanumeric? c) (or (char-alphabetic? c) (char-numeric? c) (eqv? c #\_)))
 
 (define (match input-port expected)
     (if (eqv? (peek-char input-port) expected)
