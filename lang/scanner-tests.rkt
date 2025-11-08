@@ -6,9 +6,6 @@
 (define (types-from-string s)
   (map token-type (scan-tokens (open-input-string s))))
 
-(define (lexemes-from-string s)
-  (map token-lexeme (scan-tokens (open-input-string s))))
-
 (module+ test
   (define expected-types
     '(LEFT_PAREN RIGHT_PAREN LEFT_BRACE RIGHT_BRACE COMMA DOT MINUS PLUS SEMICOLON STAR EOF))
@@ -58,4 +55,26 @@
 
   (test-case "equals followed by equals produces EQUAL_EQUAL"
     (check-equal? (types-from-string "==")
-                  '(EQUAL_EQUAL EOF))))
+                  '(EQUAL_EQUAL EOF)))
+
+  (test-case "scan slash token"
+    (check-equal? (types-from-string "/")
+                  '(SLASH EOF)))
+
+  (test-case "lexeme for slash token"
+    (define toks (scan-tokens (open-input-string "/")))
+    (define first1 (take toks 1))
+    (check-equal? (map token-lexeme first1)
+                  (list #\/)))
+
+  (test-case "line comments are ignored until newline"
+    (check-equal? (types-from-string "// this is a comment\n+")
+                  '(PLUS EOF)))
+
+  (test-case "line comment at end of file is ignored"
+    (check-equal? (types-from-string "// nothing after comment")
+                  '(EOF)))
+
+  (test-case "slash not starting a comment is a token"
+    (check-equal? (types-from-string "/=")
+                  '(SLASH EQUAL EOF))))

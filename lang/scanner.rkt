@@ -1,5 +1,7 @@
 #lang racket
 
+(require "helpers.rkt")
+
 (provide
   scan-tokens
   scan-token
@@ -62,12 +64,25 @@
                 [(#\>) (if (match input-port #\=)
                            (token 'GREATER_EQUAL ">=" #f line col)
                            (token 'GREATER       #\>  #f line col))]
+                [(#\/) (handle-slash input-port line col)]
                 ;; Ignore simple whitespace and read the next token
                 [(#\space #\tab #\newline #\return)
-                (scan-token input-port)]
+                    (scan-token input-port)]
                 [else
-                (error 'scan-token (format "Unexpected character: ~a at ~a:~a"
+                    (error 'scan-token (format "Unexpected character: ~a at ~a:~a"
                                             c line col))]))))
+
+(define (handle-slash input-port line col)
+    (if (match input-port #\/)
+        (begin 
+            (while 
+                (and 
+                    (not (eqv? (peek-char input-port) #\newline))
+                    (not (is-at-end? input-port))) (read-char input-port))
+            (scan-token input-port))
+        (token 'SLASH #\/ #f line col)))
+
+(define (is-at-end? input-port) (eof-object? (read-char input-port)))
 
 (define (match input-port expected)
     (if (eqv? (peek-char input-port) expected)
