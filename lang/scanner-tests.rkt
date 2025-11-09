@@ -103,4 +103,23 @@
     (define token (first (scan-tokens (open-input-string "123.45"))))
     (check-equal? (token-lexeme token) "123.45")
     (check-true (flonum? (token-literal token)))
-    (check-equal? (token-literal token) 123.45)))
+    (check-equal? (token-literal token) 123.45))
+
+  (test-case "scan all keyword tokens"
+    (define input "and class else false for fun if nil or print return super this true var while")
+    (check-equal? (types-from-string input)
+                  '(AND CLASS ELSE FALSE FOR FUN IF NIL OR PRINT RETURN SUPER THIS TRUE VAR WHILE EOF)))
+
+  (test-case "lexemes for keyword tokens"
+    (define toks (scan-tokens (open-input-string "and class else false for fun if nil or print return super this true var while")))
+    (define first16 (take toks 16))
+    (check-equal? (map token-lexeme first16)
+                  '("and" "class" "else" "false" "for" "fun" "if" "nil" "or" "print" "return" "super" "this" "true" "var" "while")))
+
+  (test-case "non-keyword identifiers produce IDENTIFIER tokens"
+    (define toks (scan-tokens (open-input-string "lox foo123 bar_baz")))
+    (define first3 (take toks 3))
+    (check-equal? (map token-type first3)
+                  '(IDENTIFIER IDENTIFIER IDENTIFIER))
+    (check-equal? (map token-lexeme first3)
+                  '("lox" "foo123" "bar_baz"))))
