@@ -3,7 +3,10 @@ FROM debian:bullseye as dart-base
 
 RUN apt-get update -y && apt-get install -y \
     wget \
-    && rm -rf /var/lib/apt/lists/*
+    libcairo2 \
+    libglib2.0-0 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0
 
 ARG DART_VERSION=2.19.6
 ARG DART_DEB=dart_${DART_VERSION}-1_amd64.deb

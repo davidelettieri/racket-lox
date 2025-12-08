@@ -1,3 +1,3 @@
 #lang racket-lox
 
-2
+print 2;
