@@ -6,6 +6,8 @@
   (syntax-parse stx
     [(_ cond:expr body:expr ...)
       #'(let loop ()
-        (when cond body ... (loop)))]))
+        (when cond
+          body ...
+          (loop)))]))
 
 (provide while)

@@ -1,29 +1,20 @@
 #lang racket/base
 
-(require (only-in racket/base
-            [read base-read]
-            [read-syntax base-read-syntax]
-            eof-object?))
+(require (only-in racket/base eof-object?)
+         "scanner.rkt"
+         "parser.rkt")
 
 (define (read in)
-    (define forms
-        (let loop ([acc '()])
-            (define v (base-read in))
-            (if (eof-object? v)
-                    (reverse acc)
-                    (loop (cons v acc)))))
-    `(module anonymous-module racket-lox ,@forms))
+    (define tokens (scan-tokens in))
+    (define ast (parse tokens))
+    `(module anonymous-module racket-lox ,@ast))
 
 (define (read-syntax src in)
     (define source (or src (object-name in)))
-    (define forms
-        (let loop ([acc '()])
-            (define v (base-read-syntax source in))
-            (if (eof-object? v)
-                    (reverse acc)
-                    (loop (cons v acc)))))
+    (define tokens (scan-tokens in))
+    (define ast (parse tokens))
     (define module-stx
-        `(module anonymous-module racket-lox ,@forms))
+        `(module anonymous-module racket-lox ,@ast))
     module-stx)
 
 (provide read read-syntax)

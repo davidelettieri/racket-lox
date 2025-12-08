@@ -1,36 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Configure paths
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-CACHE_DIR="$REPO_ROOT/.cache"
-mkdir -p "$CACHE_DIR"
-
-# Dart package details
-DART_VERSION="2.19.6"
-DART_DEB="dart_${DART_VERSION}-1_amd64.deb"
-DART_URL="https://storage.googleapis.com/dart-archive/channels/stable/release/${DART_VERSION}/linux_packages/${DART_DEB}"
-DEB_PATH="$CACHE_DIR/$DART_DEB"
-
-echo "Using cache directory: $CACHE_DIR"
-
-# Download once into cache if not present
-if [[ -f "$DEB_PATH" ]]; then
-	echo "Dart package already cached: $DEB_PATH"
-else
-	echo "Downloading Dart package to cache…"
-	wget -O "$DEB_PATH" "$DART_URL"
-fi
-
-# Install Dart from cached .deb
-sudo dpkg -i "$DEB_PATH"
-
 # Ensure dart is on PATH for this session
 export PATH="$PATH:/usr/lib/dart/bin"
 
-# Install Racket and packages
-sudo apt update -y
-sudo apt install -y racket
-raco pkg install racket-langserver --auto
+# Check if Racket is already installed
+if command -v racket &> /dev/null; then
+	echo "Racket is already installed: $(racket --version)"
+else
+	echo "Racket not found, installing…"
+	curl -L -o /tmp/racket-installer.sh https://download.racket-lang.org/installers/9.0/racket-9.0-x86_64-linux-buster-cs.sh
+	bash /tmp/racket-installer.sh --dest /usr/racket
+	rm /tmp/racket-installer.sh
+fi
+
+# Install Racket packages
+if ! raco pkg show racket-langserver &> /dev/null; then
+	echo "Installing racket-langserver…"
+	raco pkg install racket-langserver --auto
+else
+	echo "racket-langserver is already installed"
+fi
+
+# Install local dependencies
 raco pkg install 

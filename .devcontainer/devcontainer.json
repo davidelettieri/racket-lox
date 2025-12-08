@@ -1,27 +1,25 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/debian
 {
-	"name": "Debian",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/base:bullseye",
-	"postCreateCommand": "bash scripts/install-dependencies.sh",
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
-	// Configure tool-specific properties.
+	"name": "racket-lox",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
 	"customizations": {
 		"vscode": {
 			"extensions": [
 				"evzen-wybitul.magic-racket"
-			]
+			],
+			"settings": {
+				"[racket]": {
+					"editor.defaultFormatter": "evzen-wybitul.magic-racket",
+					"editor.formatOnSave": true
+				}
+			}
 		}
 	},
 	"remoteEnv": {
 		"PATH": "${containerEnv:PATH}:/usr/racket/bin",
 		"MY_REMOTE_VARIABLE": "some-other-value-here",
 		"MY_REMOTE_VARIABLE2": "${localEnv:SOME_LOCAL_VAR}"
-	}
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
+	},
+	"postCreateCommand": "bash scripts/install-dependencies.sh"
 }
