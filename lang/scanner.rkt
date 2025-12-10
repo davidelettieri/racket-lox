@@ -36,34 +36,38 @@
         (reverse (cons token acc))
         (scan-tokens-impl input-port (cons token acc)))))
 
+;; helper to build srcloc with a real source
+(define (make-src ip line col pos span)
+  (srcloc (object-name ip) line col pos span))
+
 (define (scan-token input-port)
   (define-values (line col pos) (port-next-location input-port))
   (let ([c (read-char input-port)])
     (if (eof-object? c)
-        (token 'EOF eof #f (srcloc #f line col pos 1))
+        (token 'EOF eof #f (make-src input-port line col pos 1))
         (case c
-          [(#\() (token 'LEFT_PAREN  #\( #f (srcloc #f line col pos 1))]
-          [(#\)) (token 'RIGHT_PAREN #\) #f (srcloc #f line col pos 1))]
-          [(#\{) (token 'LEFT_BRACE  #\{ #f (srcloc #f line col pos 1))]
-          [(#\}) (token 'RIGHT_BRACE #\} #f (srcloc #f line col pos 1))]
-          [(#\,) (token 'COMMA       #\, #f (srcloc #f line col pos 1))]
-          [(#\.) (token 'DOT         #\. #f (srcloc #f line col pos 1))]
-          [(#\-) (token 'MINUS       #\- #f (srcloc #f line col pos 1))]
-          [(#\+) (token 'PLUS        #\+ #f (srcloc #f line col pos 1))]
-          [(#\;) (token 'SEMICOLON   #\; #f (srcloc #f line col pos 1))]
-          [(#\*) (token 'STAR        #\* #f (srcloc #f line col pos 1))]
+          [(#\() (token 'LEFT_PAREN  #\( #f (make-src input-port line col pos 1))]
+          [(#\)) (token 'RIGHT_PAREN #\) #f (make-src input-port line col pos 1))]
+          [(#\{) (token 'LEFT_BRACE  #\{ #f (make-src input-port line col pos 1))]
+          [(#\}) (token 'RIGHT_BRACE #\} #f (make-src input-port line col pos 1))]
+          [(#\,) (token 'COMMA       #\, #f (make-src input-port line col pos 1))]
+          [(#\.) (token 'DOT         #\. #f (make-src input-port line col pos 1))]
+          [(#\-) (token 'MINUS       #\- #f (make-src input-port line col pos 1))]
+          [(#\+) (token 'PLUS        #\+ #f (make-src input-port line col pos 1))]
+          [(#\;) (token 'SEMICOLON   #\; #f (make-src input-port line col pos 1))]
+          [(#\*) (token 'STAR        #\* #f (make-src input-port line col pos 1))]
           [(#\!) (if (match input-port #\=)
-                     (token 'BANG_EQUAL "!=" #f (srcloc #f line col pos 2))
-                     (token 'BANG       #\!  #f (srcloc #f line col pos 1)))]
+                     (token 'BANG_EQUAL "!=" #f (make-src input-port line col pos 2))
+                     (token 'BANG       #\!  #f (make-src input-port line col pos 1)))]
           [(#\=) (if (match input-port #\=)
-                     (token 'EQUAL_EQUAL "==" #f (srcloc #f line col pos 2))
-                     (token 'EQUAL       #\=  #f (srcloc #f line col pos 1)))]
+                     (token 'EQUAL_EQUAL "==" #f (make-src input-port line col pos 2))
+                     (token 'EQUAL       #\=  #f (make-src input-port line col pos 1)))]
           [(#\<) (if (match input-port #\=)
-                     (token 'LESS_EQUAL "<=" #f (srcloc #f line col pos 2))
-                     (token 'LESS       #\<  #f (srcloc #f line col pos 1)))]
+                     (token 'LESS_EQUAL "<=" #f (make-src input-port line col pos 2))
+                     (token 'LESS       #\<  #f (make-src input-port line col pos 1)))]
           [(#\>) (if (match input-port #\=)
-                     (token 'GREATER_EQUAL ">=" #f (srcloc #f line col pos 2))
-                     (token 'GREATER       #\>  #f (srcloc #f line col pos 1)))]
+                     (token 'GREATER_EQUAL ">=" #f (make-src input-port line col pos 2))
+                     (token 'GREATER       #\>  #f (make-src input-port line col pos 1)))]
           [(#\/) (handle-slash input-port line col pos)]
           [(#\") (string-token input-port line col pos)]
           ;; Ignore simple whitespace and read the next token
@@ -77,6 +81,7 @@
               (error 'scan-token (format "Unexpected character: ~a at ~a:~a"
                                          c line col))])]))))
 
+;; update helpers to use make-src
 (define (identifier c input-port line col pos)
   (define chars (list c))
   (define (advance)
@@ -87,7 +92,7 @@
                      (advance))))
   (define value (list->string (reverse chars)))
   (define type (hash-ref keywords value 'IDENTIFIER))
-  (token type value #f (srcloc #f line col pos (string-length value))))
+  (token type value #f (make-src input-port line col pos (string-length value))))
 
 (define (number c input-port line col pos)
   (define chars (list c))
@@ -109,7 +114,8 @@
      (numeric? (peek-char input-port))
      (advance)))
   (define value (list->string (reverse chars)))
-  (token 'NUMBER value (string->number (string-append "#i" value)) (srcloc #f line col pos (string-length value))))
+  (token 'NUMBER value (string->number (string-append "#i" value))
+         (make-src input-port line col pos (string-length value))))
 
 (define (string-token input-port line col pos)
   (define chars '())
@@ -117,14 +123,15 @@
   (when (is-at-end? input-port) (error "Unterminated string."))
   (read-char input-port)
   (define value (list->string (reverse chars)))
-  (token 'STRING value #f (srcloc #f line col pos (+ 2 (string-length value)))))
+  (token 'STRING value #f
+         (make-src input-port line col pos (+ 2 (string-length value)))))
 
 (define (handle-slash input-port line col pos)
   (if (match input-port #\/)
       (begin
         (while-not-char-not-end input-port #\newline (read-char input-port))
         (scan-token input-port))
-      (token 'SLASH #\/ #f (srcloc #f line col pos 1))))
+      (token 'SLASH #\/ #f (make-src input-port line col pos 1))))
 
 (define (is-at-end? input-port) (eof-object? (peek-char input-port)))
 (define (is-alphanumeric? c) (or (char-alphabetic? c) (char-numeric? c) (eqv? c #\_)))
