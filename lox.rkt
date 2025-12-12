@@ -1,7 +1,11 @@
 #lang racket
 
-(require racket/syntax)
+(require racket/syntax syntax/parse)
 (require (for-syntax racket/base racket/syntax syntax/parse))
+
+(begin-for-syntax 
+  (define-syntax-class maybe-id
+  (pattern (~or id #f))))
 
 (define-syntax (lox-define-var stx)
   (syntax-parse stx
@@ -28,6 +32,11 @@
   (with-syntax ([line (syntax-line stx)])
     (syntax-case stx ()
       [(_ a b) (syntax (lox-add-impl a b line))])))
+
+(define-syntax (lox-class stx)
+  (syntax-parse stx
+    [(_ name:id superclass:maybe-id methods:expr)
+     #'(begin (displayln (list "class" 'name "superclass" 'superclass 'methods)))]))
 
 (define (lox-add-impl left right line)
   (cond
@@ -60,7 +69,8 @@
          lox-add
          lox-block
          lox-var-value
-         lox-declarations)
+         lox-declarations
+         lox-class)
 
 ; (define lox-nil 'nil)
 

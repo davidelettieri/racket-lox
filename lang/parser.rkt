@@ -1,7 +1,6 @@
 #lang racket
 
 (require "helpers.rkt" "scanner.rkt")
-(require racket/match)
 
 (define (token->src t)
     (token-srcloc t))
@@ -48,7 +47,23 @@
                 (function "function"))]
             [(match 'VAR) (var-declaration)]
             [else (statement)]))
-    (define (class-declaration) (error 'not-implemented))
+    (define (class-declaration)
+        (define name (consume 'IDENTIFIER "Expect class name."))
+        (define superclass #f)
+        (when (match 'LESS)
+            (consume 'IDENTIFIER "Expect superclass name.")
+            (set! superclass (previous)))
+        (consume 'LEFT_BRACE "Expect '{' before class body.")
+        (define methods '())
+        (while (not (and (check 'RIGHT_BRACE) (not (is-at-end?))))
+            (set! methods (cons (function "method") methods)))
+        (consume 'RIGHT_BRACE "Expect '}' after class body.")
+        (define name-id
+            (datum->syntax
+                #f
+                (string->symbol (token-lexeme name))
+                (token->src name)))
+        (datum->syntax #f `(lox-class ,name-id ,superclass ,methods)))
     (define (function type) (error 'not-implemented))
     (define (var-declaration) (error 'not-implemented))
     (define (for-statement) (error 'not-implemented))
