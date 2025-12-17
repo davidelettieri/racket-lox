@@ -76,7 +76,7 @@
         (define parameters '())
         (when (not (check 'RIGHT_PAREN))
             (do 
-                (when (> (length parameters) 0)
+                (when (> (length parameters) 256)
                     (raise "Too many parameters"))
                 (set! parameters (cons (consume 'IDENTIFIER "Expect parameter name") parameters))
             while
@@ -111,11 +111,10 @@
             [(match 'WHILE) (while-statement)]
             [(match 'LEFT_BRACE) (block-statement)]
             [else (expression-statement)]))
-    (define statements '())
-    (while (not (is-at-end?))
-        (define decl (declaration))
-        (when (not (null? decl))
-            (set! statements (cons decl statements))))
-    (reverse statements))
+    (for/list (
+        [decl (in-producer declaration)]
+        #:break (is-at-end?)
+        #:when (lambda (el) (not (null? el))))
+        decl))
 
 (provide parse)

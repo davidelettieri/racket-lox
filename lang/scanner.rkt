@@ -28,13 +28,11 @@
 
 (define (scan-tokens input-port)
   (port-count-lines! input-port)
-  (scan-tokens-impl input-port '()))
-
-(define (scan-tokens-impl input-port acc)
-  (let [(token (scan-token input-port))]
-    (if (eqv? 'EOF (token-type token))
-        (reverse (cons token acc))
-        (scan-tokens-impl input-port (cons token acc)))))
+  (for/list (
+    [token (in-producer 
+      (lambda () (scan-token input-port)))]
+      #:final (eqv? 'EOF (token-type token)))
+      token))
 
 ;; helper to build srcloc with a real source
 (define (make-src ip line col pos span)
