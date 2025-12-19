@@ -7,7 +7,7 @@
   (define-syntax-class maybe-id
   (pattern (~or id #f))))
 
-(define-syntax (lox-define-var stx)
+(define-syntax (lox-var-declaration stx)
   (syntax-parse stx
     [(_ name:id val:expr)
        (syntax (define name val))]))
@@ -63,7 +63,7 @@
 (define-syntax-rule (lox-declarations head ...)
   (begin head ...))
 
-(provide lox-define-var
+(provide lox-var-declaration
          lox-assign
          lox-print
          lox-add
