@@ -3,6 +3,68 @@
 (require racket/syntax syntax/parse)
 (require (for-syntax racket/base racket/syntax syntax/parse))
 
+(define-syntax (lox-binary stx)
+  (syntax-parse stx
+    [(_ left:expr "+" right:expr)
+      #'(lox-add left right)]
+    [(_ left:expr "-" right:expr)
+      #'(lox-subtract left right)]
+    [(_ left:expr ">" right:expr)
+      #'(lox-greater left right)]
+    [(_ left:expr ">=" right:expr)
+      #'(lox-greater-equal left right)]
+    [(_ left:expr "<" right:expr)
+      #'(lox-less left right)]
+    [(_ left:expr "<=" right:expr)
+      #'(lox-less-equal left right)]
+    [(_ left:expr "/" right:expr)
+      #'(lox-divide left right)]
+    [(_ left:expr "*" right:expr)
+      #'(lox-multiply left right)]
+    [(_ left:expr "!=" right:expr)
+      #'(not (lox-eqv? left right))]
+    [(_ left:expr "==" right:expr)
+      #'(lox-eqv? left right)]))
+
+(define (lox-eqv? a b)
+  (cond
+    [(and (real? a) (nan? a)) #f]
+    [(and (real? b) (nan? b)) #f]
+    [else (eqv? a b)]))
+
+(define-syntax (lox-add stx)
+  (with-syntax ([line (syntax-line stx)])
+    (syntax-case stx ()
+      [(_ a b) (syntax (lox-add-impl a b line))])))
+
+(define (lox-add-impl left right line)
+  (cond
+    [(and (number? left) (number? right)) (+ left right)]
+    [(and (string? left) (string? right)) (string-append left right)]
+    [else (lox-runtime-error "Operands must be two numbers or two strings." line)]))
+
+(define-syntax-rule (lox-binary-number-op name op)
+  (define-syntax (name stx)
+    (with-syntax ([line (syntax-line stx)]
+                  [impl-id (format-id #'name "~a-impl" #'name)])
+      (syntax-case stx ()
+        [(_ a b) (syntax (define (impl-id a b) (op a b)))
+                 (syntax (if (and (number? a) (number? b)) (op a b) (lox-runtime-error "Operands must be numbers." line)))]))))
+
+(lox-binary-number-op lox-divide /)
+(lox-binary-number-op lox-multiply *)
+(lox-binary-number-op lox-subtract -)
+(lox-binary-number-op lox-less <)
+(lox-binary-number-op lox-less-equal <=)
+(lox-binary-number-op lox-greater >)
+(lox-binary-number-op lox-greater-equal >=)
+
+(define-syntax (lox-function-call stx)
+  (syntax-parse stx
+    [(_ name:expr arg1:expr ...)
+     (with-syntax ([function (format-id #'name "~a" #'name)])
+       #'(function arg1 ...))]))
+
 (begin-for-syntax 
   (define-syntax-class maybe-id
   (pattern (~or id #f))))
@@ -28,21 +90,12 @@
 (define (print-bool value)
   (displayln (if value "true" "false")))
 
-(define-syntax (lox-add stx)
-  (with-syntax ([line (syntax-line stx)])
-    (syntax-case stx ()
-      [(_ a b) (syntax (lox-add-impl a b line))])))
-
 (define-syntax (lox-class stx)
   (syntax-parse stx
     [(_ name:id superclass:maybe-id methods:expr)
      #'(begin (displayln (list "class" 'name "superclass" 'superclass 'methods)))]))
 
-(define (lox-add-impl left right line)
-  (cond
-    [(and (number? left) (number? right)) (+ left right)]
-    [(and (string? left) (string? right)) (string-append left right)]
-    [else (lox-runtime-error "Operands must be two numbers or two strings." line)]))
+
 
 (define (lox-runtime-error message line)
   (begin
@@ -63,7 +116,8 @@
 (define-syntax-rule (lox-declarations head ...)
   (begin head ...))
 
-(provide lox-var-declaration
+(provide lox-binary
+         lox-var-declaration
          lox-assign
          lox-print
          lox-add
@@ -81,11 +135,7 @@
 
 
 
-; (define (lox-eqv? a b)
-;   (cond
-;     [(and (real? a) (nan? a)) #f]
-;     [(and (real? b) (nan? b)) #f]
-;     [else (eqv? a b)]))
+
 
 ; (define-syntax lox-if
 ;   (syntax-rules ()
@@ -103,22 +153,7 @@
 ; (define (lox-negate-impl a line)
 ;   (if (number? a) (- a) (lox-runtime-error "Operand must be a number." line)))
 
-; (define-syntax-rule (lox-binary-number-op name op)
-;   (define-syntax (name stx)
-;     (with-syntax ([line (syntax-line stx)]
-;                   [impl-id (format-id #'name "~a-impl" #'name)])
-;       (syntax-case stx ()
-;         [(_ a b) (syntax (define (impl-id a b) (op a b)))
-;                  (syntax (if (and (number? a) (number? b)) (op a b) (lox-runtime-error "Operands must be numbers." line)))]))))
 
-
-; (lox-binary-number-op lox-divide /)
-; (lox-binary-number-op lox-multiply *)
-; (lox-binary-number-op lox-subtract -)
-; (lox-binary-number-op lox-less <)
-; (lox-binary-number-op lox-less-equal <=)
-; (lox-binary-number-op lox-greater >)
-; (lox-binary-number-op lox-greater-equal >=)
 
 ; (define-syntax-rule (lox-string s) s)
 ; (define-syntax-rule (lox-number n) n)
