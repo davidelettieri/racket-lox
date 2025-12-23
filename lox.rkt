@@ -65,10 +65,6 @@
      (with-syntax ([function (format-id #'name "~a" #'name)])
        #'(function arg1 ...))]))
 
-(begin-for-syntax 
-  (define-syntax-class maybe-id
-  (pattern (~or id #f))))
-
 (define-syntax (lox-var-declaration stx)
   (syntax-parse stx
     [(_ name:id val:expr)
@@ -92,9 +88,26 @@
 
 (define-syntax (lox-class stx)
   (syntax-parse stx
-    [(_ name:id superclass:maybe-id methods:expr)
-     #'(begin (displayln (list "class" 'name "superclass" 'superclass 'methods)))]))
+    [(_ name:id #f methods:expr)
+     (define method-list (syntax->list #'methods))
+     ;(displayln method-list)
+     (define (method->syntax m)
+       (syntax-parse m
+         [((mname:id (arg:id ...) body:expr ...))
+          #'(define/public (mname arg ...) body ...)]))
+     (displayln 1)
+     (displayln (method->syntax (cdr method-list)))
+     (with-syntax ([class-name (format-id #'name "~a%" #'name)]
+                   [(method-def ...) (map method->syntax method-list)])
+       #'(define class-name
+           (class object%
+             (super-new)
+             method-def ...)))]))
 
+
+(lox-class Point #f
+  ((init (x y) (set! this-x x) (set! this-y y))
+   (move (dx dy) (set! this-x (+ this-x dx)) (set! this-y (+ this-y dy)))))
 
 
 (define (lox-runtime-error message line)
