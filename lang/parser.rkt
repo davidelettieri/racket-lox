@@ -102,7 +102,7 @@
             decl))
         (consume 'RIGHT_BRACE "Expect '}' after block.")
         statements)
-    (define (term) (error 'not-implemented))
+    (define (term) (error 'term-not-implemented))
     (define (for-statement) (error 'not-implemented))
     (define (if-statement) (error 'not-implemented))
     (define (return-statement) (error 'not-implemented))
@@ -157,17 +157,5 @@
         #:break (is-at-end?)
         #:when (lambda (el) (not (null? el))))
         decl))
-
-
-(define-syntax-rule (iterative-production name)
-    (define (name)
-        (define expr (term))
-        (while (match 'GREATER 'GREATER_EQUAL 'LESS 'LESS_EQUAL)
-            (define op (previous))
-            (define right (term))
-            (define op-name (token-lexeme op))
-            (set! expr (datum->syntax #f `(lox-binary ,expr ,op-name ,right))))
-        expr))
-
 
 (provide parse)

@@ -88,27 +88,31 @@
 
 (define-syntax (lox-class stx)
   (syntax-parse stx
-    [(_ name:id #f methods:expr)
-     (define method-list (syntax->list #'methods))
-     ;(displayln method-list)
-     (define (method->syntax m)
-       (syntax-parse m
-         [((mname:id (arg:id ...) body:expr ...))
-          #'(define/public (mname arg ...) body ...)]))
-     (displayln 1)
-     (displayln (method->syntax (cdr method-list)))
-     (with-syntax ([class-name (format-id #'name "~a%" #'name)]
-                   [(method-def ...) (map method->syntax method-list)])
+    ;; 1. match the whole structure including the method list shape
+    [(_ name:id #f ((mname:id (marg:id ...) mbody:expr ...) ...))
+     
+     ;; 2. Create the class name identifier
+     (with-syntax ([class-name (format-id #'name "~a%" #'name)])
+       
+       ;; 3. Output the final syntax
        #'(define class-name
            (class object%
              (super-new)
-             method-def ...)))]))
-
-
-(lox-class Point #f
-  ((init (x y) (set! this-x x) (set! this-y y))
-   (move (dx dy) (set! this-x (+ this-x dx)) (set! this-y (+ this-y dy)))))
-
+             ;; 4. Use the captured pattern variables directly
+             (define/public (mname marg ...)
+               mbody ...) ...)))]
+    [(_ name:id superclass ((mname:id (marg:id ...) mbody:expr ...) ...))
+     
+     ;; 2. Create the class name identifier
+     (with-syntax ([class-name (format-id #'name "~a%" #'name)]
+                   [superclass-name (format-id #'superclass "~a%" #'superclass)])
+       ;; 3. Output the final syntax
+       #'(define class-name
+           (class superclass-name
+             (super-new)
+             ;; 4. Use the captured pattern variables directly
+             (define/public (mname marg ...)
+               mbody ...) ...)))]))
 
 (define (lox-runtime-error message line)
   (begin
@@ -170,28 +174,3 @@
 
 ; (define-syntax-rule (lox-string s) s)
 ; (define-syntax-rule (lox-number n) n)
-
-; (provide lox-define-var
-;          lox-assignment
-;          lox-var-value
-;          lox-print
-;          lox-block
-;          lox-nil
-;          lox-add
-;          lox-add-impl
-;          lox-divide
-;          lox-multiply
-;          lox-subtract
-;          lox-less
-;          lox-less-equal
-;          lox-greater
-;          lox-greater-equal
-;          lox-negate
-;          lox-negate-impl
-;          lox-number
-;          lox-string
-;          lox-if
-;          lox-declarations
-;          lox-eqv?
-;          lox-empty-program)
-
