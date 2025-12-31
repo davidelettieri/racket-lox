@@ -102,13 +102,44 @@
             decl))
         (consume 'RIGHT_BRACE "Expect '}' after block.")
         statements)
-    (define (term) (error 'term-not-implemented))
     (define (for-statement) (error 'not-implemented))
     (define (if-statement) (error 'not-implemented))
     (define (return-statement) (error 'not-implemented))
     (define (while-statement) (error 'not-implemented))
     (define (block-statement) (error 'not-implemented))
     (define (expression-statement) (error 'not-implemented))
+    (define (finish-call) (error 'finish-call-not-implemented))
+    (define (call) 
+        (define expr (primary))
+        (define c #f)
+        (while c
+            (cond 
+                [(match 'LEFT_PAREN) (set! expr (finish-call expr))]
+                [(match 'DOT) (begin
+                                (define name (consume 'IDENTIFIER "Expect property name after '.'."))
+                                (set! expr 
+                                    (datum->syntax #f `(lox-get ,expr ,name))))]
+                [else (set! c #t)])
+        expr))
+    (define (primary)
+        (cond
+            [(match 'FALSE) (datum->syntax #f #'(lox-literal #f))]
+            [(match 'TRUE) (datum->syntax #f #'(lox-literal #f))]
+            [(match 'NIL) (datum->syntax #f #'(lox-nil))]
+            [(match 'NUMBER 'STRING) (datum->syntax #f `(lox-literal (token-literal (previous))))]
+            [(match 'SUPER) 
+                (let ([keyword (previous)])
+                    (consume 'DOT "Expect '.' after 'super'.")
+                    (define method (consume 'IDENTIFIER "Expect superclass method name."))
+                    (datum->syntax #f `(lox-super ,keyword ,method)))]
+            [(match 'THIS) (datum->syntax #f `(lox-this ,(previous)))]
+            [(match 'IDENTIFIER (datum->syntax #f `(lox-variable ,(previous))))]
+            [(match 'LEFT_PAREN) (let ([expr (expression)])
+                (consume 'RIGHT_PAREN "Expect ')' after expression")
+                (datum->syntax #f `(lox-grouping ,expr)))]
+            [else (let* ([tok (peek)]
+                         [stx (datum->syntax #f (token-lexeme tok) (token->src tok))]) 
+                         (raise-syntax-error 'parse "Expect expression." stx))]))
     (define (print-statement)
         (define print-token (previous))
         (define value (expression))
@@ -129,6 +160,8 @@
               [_ (raise-syntax-error 'parse "Invalid assignment target" equal)]))
         expression))
     (define-syntax-rule (iterative-production name production . token-types)
+        (begin
+        (displayln 'name 'production token-types)
         (define (name)
             (define expr (production))
             (while (match token-types)
@@ -136,11 +169,19 @@
                 (define right (production))
                 (define op-name (token-lexeme op))
                 (set! expr (datum->syntax #f `(lox-binary ,expr ,op-name ,right))))
-            expr))
+            expr)))
+    (iterative-production factor unary 'SLASH 'STAR)
+    (iterative-production term factor 'MINUS 'PLUS)
     (iterative-production or-syntax and-syntax 'OR)
     (iterative-production and-syntax equality 'AND)
     (iterative-production equality comparison 'BANG_EQUAL 'EQUAL_EQUAL)
     (iterative-production comparison term 'GREATER 'GREATER_EQUAL 'LESS 'LESS_EQUAL)
+    (define (unary)
+        (if (not (match 'BANG 'MINUS))
+            (call)
+            (let ([op (previous)]) 
+                (define right (unary))
+                (datum->syntax #f `(lox-unary ,op ,right)))))
     (define (expression)
         (assignment))
     (define (statement)
