@@ -129,6 +129,8 @@
   (let ()
     a ...))
 
+(define-syntax-rule (lox-literal v)
+  v)
 
 (define-syntax-rule (lox-declarations head ...)
   (begin head ...))
@@ -141,7 +143,8 @@
          lox-block
          lox-var-value
          lox-declarations
-         lox-class)
+         lox-class
+         lox-literal)
 
 ; (define lox-nil 'nil)
 

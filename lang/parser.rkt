@@ -102,16 +102,19 @@
             decl))
         (consume 'RIGHT_BRACE "Expect '}' after block.")
         statements)
-    (define (for-statement) (error 'not-implemented))
-    (define (if-statement) (error 'not-implemented))
-    (define (return-statement) (error 'not-implemented))
-    (define (while-statement) (error 'not-implemented))
-    (define (block-statement) (error 'not-implemented))
-    (define (expression-statement) (error 'not-implemented))
+    (define (for-statement) (error 'for-statement-not-implemented))
+    (define (if-statement) (error 'if-statement-not-implemented))
+    (define (return-statement) (error 'return-statement-not-implemented))
+    (define (while-statement) (error 'while-statement-not-implemented))
+    (define (block-statement) (error 'block-statement-not-implemented))
+    (define (expression-statement)
+        (define value (expression))
+        (consume 'SEMICOLON "Expect ';' after expression.")
+        value)
     (define (finish-call) (error 'finish-call-not-implemented))
-    (define (call) 
+    (define (call)
         (define expr (primary))
-        (define c #f)
+        (define c #t)
         (while c
             (cond 
                 [(match 'LEFT_PAREN) (set! expr (finish-call expr))]
@@ -119,14 +122,14 @@
                                 (define name (consume 'IDENTIFIER "Expect property name after '.'."))
                                 (set! expr 
                                     (datum->syntax #f `(lox-get ,expr ,name))))]
-                [else (set! c #t)])
-        expr))
+                [else (set! c #f)]))
+        expr)
     (define (primary)
         (cond
             [(match 'FALSE) (datum->syntax #f #'(lox-literal #f))]
             [(match 'TRUE) (datum->syntax #f #'(lox-literal #f))]
             [(match 'NIL) (datum->syntax #f #'(lox-nil))]
-            [(match 'NUMBER 'STRING) (datum->syntax #f `(lox-literal (token-literal (previous))))]
+            [(match 'NUMBER 'STRING) (datum->syntax #f `(lox-literal ,(token-literal (previous))))]
             [(match 'SUPER) 
                 (let ([keyword (previous)])
                     (consume 'DOT "Expect '.' after 'super'.")
@@ -157,19 +160,17 @@
                (syntax/loc expression (lox-assign name value))]
               [(lox-get obj:expr name:expr)
                (syntax/loc expression (lox-set obj name value))]
-              [_ (raise-syntax-error 'parse "Invalid assignment target" equal)]))
-        expression))
+              [_ (raise-syntax-error 'parse "Invalid assignment target" equal)])))
+        expression)
     (define-syntax-rule (iterative-production name production . token-types)
-        (begin
-        (displayln 'name 'production token-types)
         (define (name)
             (define expr (production))
-            (while (match token-types)
+            (while (match . token-types)
                 (define op (previous))
                 (define right (production))
                 (define op-name (token-lexeme op))
                 (set! expr (datum->syntax #f `(lox-binary ,expr ,op-name ,right))))
-            expr)))
+            expr))
     (iterative-production factor unary 'SLASH 'STAR)
     (iterative-production term factor 'MINUS 'PLUS)
     (iterative-production or-syntax and-syntax 'OR)
@@ -195,8 +196,7 @@
             [else (expression-statement)]))
     (for/list (
         [decl (in-producer declaration)]
-        #:break (is-at-end?)
+        #:final (is-at-end?)
         #:when (lambda (el) (not (null? el))))
         decl))
-
 (provide parse)
