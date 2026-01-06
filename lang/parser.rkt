@@ -129,7 +129,8 @@
             [(match 'FALSE) (datum->syntax #f #'(lox-literal #f))]
             [(match 'TRUE) (datum->syntax #f #'(lox-literal #f))]
             [(match 'NIL) (datum->syntax #f #'(lox-nil))]
-            [(match 'NUMBER 'STRING) (datum->syntax #f `(lox-literal ,(token-literal (previous))))]
+            [(match 'STRING) (datum->syntax #f `(lox-literal ,(token-lexeme (previous))) (token->src (previous)))]
+            [(match 'NUMBER) (datum->syntax #f `(lox-literal ,(token-literal (previous))) (token->src (previous)))]
             [(match 'SUPER) 
                 (let ([keyword (previous)])
                     (consume 'DOT "Expect '.' after 'super'.")
@@ -194,7 +195,7 @@
             [(match 'WHILE) (while-statement)]
             [(match 'LEFT_BRACE) (block-statement)]
             [else (expression-statement)]))
-    ;(trace declaration assignment print-statement expression or-syntax and-syntax factor unary term comparison equality call primary)
+    ;(trace declaration var-declaration assignment print-statement expression or-syntax and-syntax factor unary term comparison equality call primary)
     (for/list (
         [decl (in-producer declaration)]
         #:final (is-at-end?)
