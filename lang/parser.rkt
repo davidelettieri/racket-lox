@@ -1,7 +1,7 @@
 #lang racket
 
 (require "helpers.rkt" "scanner.rkt")
-(require syntax/parse)
+(require syntax/parse racket/trace)
 
 (define (token->src t)
     (token-srcloc t))
@@ -136,7 +136,7 @@
                     (define method (consume 'IDENTIFIER "Expect superclass method name."))
                     (datum->syntax #f `(lox-super ,keyword ,method)))]
             [(match 'THIS) (datum->syntax #f `(lox-this ,(previous)))]
-            [(match 'IDENTIFIER (datum->syntax #f `(lox-variable ,(previous))))]
+            [(match 'IDENTIFIER) (datum->syntax #f `(lox-variable ,(token->symbol (previous))) (token->src (previous)))]
             [(match 'LEFT_PAREN) (let ([expr (expression)])
                 (consume 'RIGHT_PAREN "Expect ')' after expression")
                 (datum->syntax #f `(lox-grouping ,expr)))]
@@ -194,6 +194,7 @@
             [(match 'WHILE) (while-statement)]
             [(match 'LEFT_BRACE) (block-statement)]
             [else (expression-statement)]))
+    ;(trace declaration assignment print-statement expression or-syntax and-syntax factor unary term comparison equality call primary)
     (for/list (
         [decl (in-producer declaration)]
         #:final (is-at-end?)

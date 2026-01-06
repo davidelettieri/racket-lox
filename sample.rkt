@@ -2,4 +2,5 @@
 
 var a = 1;
 print 2;
-class MyClass < Parent {};
+class Parent {}
+class MyClass < Parent {}

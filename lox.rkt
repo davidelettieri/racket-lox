@@ -120,7 +120,7 @@
     (displayln (format "[line ~a] in script" line) (current-error-port))
     (exit 70)))
 
-(define-syntax (lox-var-value stx)
+(define-syntax (lox-variable stx)
   (syntax-parse stx
     [(_ name:id)
       (syntax name)]))
@@ -141,10 +141,10 @@
          lox-print
          lox-add
          lox-block
-         lox-var-value
          lox-declarations
          lox-class
-         lox-literal)
+         lox-literal
+         lox-variable)
 
 ; (define lox-nil 'nil)
 
