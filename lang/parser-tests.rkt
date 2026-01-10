@@ -12,7 +12,7 @@
 
 (module+ test
     (test-case "parse var declaration"
-        (check-eqv? (parse-from-string "var a = 1;print a;") '()))
+        (check-eqv? (parse-from-string "var c = 0;while (c < 3) c = c + 1;") '()))
 
 ;   ;; Tests for error detection
 ;   (test-case "error on missing class name"

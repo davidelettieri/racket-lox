@@ -1,6 +1,4 @@
 #lang racket-lox
 
-var a = 1;
-print 2;
-class Parent {}
-class MyClass < Parent {}
+var c = 0;
+c = c + 1;

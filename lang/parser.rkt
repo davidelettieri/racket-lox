@@ -103,9 +103,21 @@
         (consume 'RIGHT_BRACE "Expect '}' after block.")
         statements)
     (define (for-statement) (error 'for-statement-not-implemented))
-    (define (if-statement) (error 'if-statement-not-implemented))
+    (define (if-statement)
+        (consume 'LEFT_PAREN "Expect '(' after if.")
+        (define expr (expression))
+        (consume 'RIGHT_PAREN "Expect ')' after if.")
+        (define then (statement))
+        (if (match 'ELSE)
+            (datum->syntax #f `(lox-if ,expr ,then ,(statement)))
+            (datum->syntax #f `(lox-if ,expr ,then))))
     (define (return-statement) (error 'return-statement-not-implemented))
-    (define (while-statement) (error 'while-statement-not-implemented))
+    (define (while-statement)
+        (consume 'LEFT_PAREN "Expect '(' after 'while'.")
+        (define expr (expression))
+        (consume 'RIGHT_PAREN "Expect ')' after condition.")
+        (define stmt (statement))
+        (datum->syntax #f `(lox-while ,expr ,stmt)))
     (define (block-statement) (error 'block-statement-not-implemented))
     (define (expression-statement)
         (define value (expression))
@@ -126,9 +138,9 @@
         expr)
     (define (primary)
         (cond
-            [(match 'FALSE) (datum->syntax #f #'(lox-literal #f))]
-            [(match 'TRUE) (datum->syntax #f #'(lox-literal #f))]
-            [(match 'NIL) (datum->syntax #f #'(lox-nil))]
+            [(match 'FALSE) (datum->syntax #f `(lox-literal ,#f) (token->src (previous)))]
+            [(match 'TRUE) (datum->syntax #f `(lox-literal ,#t) (token->src (previous)))]
+            [(match 'NIL) (datum->syntax #f #'(lox-nil) (token->src (previous)))]
             [(match 'STRING) (datum->syntax #f `(lox-literal ,(token-lexeme (previous))) (token->src (previous)))]
             [(match 'NUMBER) (datum->syntax #f `(lox-literal ,(token-literal (previous))) (token->src (previous)))]
             [(match 'SUPER) 
@@ -154,14 +166,15 @@
         (when (match 'EQUAL)
             (define equal (previous))
             (define value (assignment))
-            (set! expression (syntax-parse expression
-              #:literals (lox-variable lox-get)
-              [(lox-variable name:expr)
-               ;; reuse expression’s source location
-               (syntax/loc expression (lox-assign name value))]
-              [(lox-get obj:expr name:expr)
-               (syntax/loc expression (lox-set obj name value))]
-              [_ (raise-syntax-error 'parse "Invalid assignment target" equal)])))
+            (with-syntax ([value value])
+                (set! expression (syntax-parse expression
+                    #:datum-literals (lox-variable lox-get)
+                    [(lox-variable name:expr)
+                        ;; reuse expression’s source location
+                        (syntax/loc expression (lox-assign name value))]
+                    [(lox-get obj:expr name:expr)
+                        (syntax/loc expression (lox-set obj name value))]
+                    [_ (raise-syntax-error 'parse "Invalid assignment target" equal)]))))
         expression)
     (define-syntax-rule (iterative-production name production . token-types)
         (define (name)

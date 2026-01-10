@@ -5,21 +5,21 @@
 
 (define-syntax (lox-binary stx)
   (syntax-parse stx
-    [(_ left:expr "+" right:expr)
+    [(_ left:expr #\+ right:expr)
       #'(lox-add left right)]
-    [(_ left:expr "-" right:expr)
+    [(_ left:expr #\- right:expr)
       #'(lox-subtract left right)]
-    [(_ left:expr ">" right:expr)
+    [(_ left:expr #\> right:expr)
       #'(lox-greater left right)]
     [(_ left:expr ">=" right:expr)
       #'(lox-greater-equal left right)]
-    [(_ left:expr "<" right:expr)
+    [(_ left:expr #\< right:expr)
       #'(lox-less left right)]
     [(_ left:expr "<=" right:expr)
       #'(lox-less-equal left right)]
-    [(_ left:expr "/" right:expr)
+    [(_ left:expr #\/ right:expr)
       #'(lox-divide left right)]
-    [(_ left:expr "*" right:expr)
+    [(_ left:expr #\* right:expr)
       #'(lox-multiply left right)]
     [(_ left:expr "!=" right:expr)
       #'(not (lox-eqv? left right))]
@@ -36,6 +36,14 @@
   (with-syntax ([line (syntax-line stx)])
     (syntax-case stx ()
       [(_ a b) (syntax (lox-add-impl a b line))])))
+
+(define-syntax (lox-while stx)
+  (syntax-parse stx
+    [(_ cond:expr body:expr ...)
+      #'(let loop ()
+        (when cond
+          body ...
+          (loop)))]))
 
 (define (lox-add-impl left right line)
   (cond
@@ -74,8 +82,9 @@
   (syntax-parse stx
     [(_ name:id val:expr)
       #'(begin
-      (set! name val)
-      val)]))
+      (let [(c val)]
+        (set! name c)
+        c))]))
 
 (define (lox-print value)
   (cond
@@ -85,6 +94,11 @@
 
 (define (print-bool value)
   (displayln (if value "true" "false")))
+
+(define-syntax (lox-if stx)
+  (syntax-parse stx
+    [(_ cond then) #'(when cond then)]
+    [(_ cond then else) #'(if cond then else)]))
 
 (define-syntax (lox-class stx)
   (syntax-parse stx
@@ -144,7 +158,9 @@
          lox-declarations
          lox-class
          lox-literal
-         lox-variable)
+         lox-variable
+         lox-if
+         lox-while)
 
 ; (define lox-nil 'nil)
 
