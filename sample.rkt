@@ -1,4 +1,10 @@
 #lang racket-lox
 
-var c = 0;
-c = c + 1;
+var a = 0;
+{
+  var a = 10;
+  a = a + 1;
+  print a;
+}
+
+print a;

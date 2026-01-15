@@ -94,10 +94,13 @@
         (consume 'SEMICOLON "Expect ';' after variable declaration.")
         (define name-id (token->symbol name))
         (datum->syntax #f `(lox-var-declaration ,name-id ,initializer)))
+    (define (block-statement)
+        (define statements (block))
+        (datum->syntax #f `(lox-block ,@statements)))
     (define (block)
         (define statements (for/list (
             [decl (in-producer declaration)]
-            #:break (or (check 'RIGHT_BRACE) (is-at-end?))
+            #:final (or (check 'RIGHT_BRACE) (is-at-end?))
             #:when (lambda (el) (not (null? el))))
             decl))
         (consume 'RIGHT_BRACE "Expect '}' after block.")
@@ -118,7 +121,6 @@
         (consume 'RIGHT_PAREN "Expect ')' after condition.")
         (define stmt (statement))
         (datum->syntax #f `(lox-while ,expr ,stmt)))
-    (define (block-statement) (error 'block-statement-not-implemented))
     (define (expression-statement)
         (define value (expression))
         (consume 'SEMICOLON "Expect ';' after expression.")
