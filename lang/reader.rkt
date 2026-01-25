@@ -17,4 +17,11 @@
         `(module anonymous-module racket-lox ,@ast))
     module-stx)
 
-(provide read read-syntax)
+(define (get-info in mod line col pos)
+  (lambda (key default)
+    (case key
+      [(color-lexer)
+       (dynamic-require 'racket-lox/lang/colorer 'color-lexer)]
+      [else default])))
+
+(provide read read-syntax get-info)

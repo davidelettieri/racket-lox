@@ -5,7 +5,8 @@
 
 (provide
  scan-tokens
- (struct-out token))
+ (struct-out token)
+ keywords)
 
 (define keywords
   (hash

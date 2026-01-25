@@ -105,7 +105,22 @@
             decl))
         (consume 'RIGHT_BRACE "Expect '}' after block.")
         statements)
-    (define (for-statement) (error 'for-statement-not-implemented))
+    (define (for-statement)
+        (consume 'LEFT_PAREN "Expect '(' after 'for'.")
+        (define initializer 
+            (cond 
+                [(match 'SEMICOLON) #f]
+                [(match 'VAR) (var-declaration)]
+                [else (expression-statement)]))
+        (define condition (if (check 'SEMICOLON) (datum->syntax #f `(lox-literal #t)) (expression)))
+        (consume 'SEMICOLON "Expect ';' after loop condition.")
+        (define increment (if (check 'RIGHT_PAREN) #f (expression)))
+        (consume 'RIGHT_PAREN "Expect ')' after for clauses.")
+        (define body (statement))
+        (when increment (set! body (datum->syntax #f `(lox-block ,body ,increment))))
+        (set! body (datum->syntax #f `(lox-while ,condition ,body)))
+        (when initializer (set! body (datum->syntax #f `(lox-block ,initializer ,body))))
+        body)
     (define (if-statement)
         (consume 'LEFT_PAREN "Expect '(' after if.")
         (define expr (expression))
