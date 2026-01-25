@@ -13,6 +13,7 @@
         (token->src t)))
 
 (define (parse tokens)
+    ;(displayln tokens)
     (define _tokens (list->vector tokens))
     (define _current 0)
     (define (advance)
@@ -31,9 +32,9 @@
         (and (not (is-at-end?)) (eqv? (token-type (peek)) type)))
     (define (check-next type)
         (and 
-            (not is-at-end?)
-            (not (eqv? (token-type (vector-ref _tokens (+ _current 1)) 'EOF)))
-            (eqv? (token-type (vector-ref _tokens (+ _current 1)) type))))
+            (not (is-at-end?))
+            (not (eqv? (token-type (vector-ref _tokens (+ _current 1))) 'EOF))
+            (eqv? (token-type (vector-ref _tokens (+ _current 1))) type)))
     (define (previous) (vector-ref _tokens (- _current 1)))
     (define (peek) (vector-ref _tokens _current))
     (define (is-at-end?)
@@ -129,7 +130,13 @@
         (if (match 'ELSE)
             (datum->syntax #f `(lox-if ,expr ,then ,(statement)))
             (datum->syntax #f `(lox-if ,expr ,then))))
-    (define (return-statement) (error 'return-statement-not-implemented))
+    (define (return-statement)
+        (define keyword (previous))
+        (define value (if (check 'SEMICOLON)
+                          (datum->syntax #f `(lox-nil))
+                          (expression)))
+        (consume 'SEMICOLON "Expect ';' after return value.")
+        (datum->syntax #f `(lox-return ,value) (token->src keyword)))
     (define (while-statement)
         (consume 'LEFT_PAREN "Expect '(' after 'while'.")
         (define expr (expression))
@@ -225,7 +232,7 @@
             [(match 'WHILE) (while-statement)]
             [(match 'LEFT_BRACE) (block-statement)]
             [else (expression-statement)]))
-    ;(trace declaration var-declaration assignment print-statement expression or-syntax and-syntax factor unary term comparison equality call primary)
+    ;(trace check check-next declaration var-declaration assignment print-statement expression or-syntax and-syntax factor unary term comparison equality call primary)
     (for/list (
         [decl (in-producer declaration)]
         #:final (is-at-end?)

@@ -1,7 +1,9 @@
 #lang racket
 
-(require racket/syntax syntax/parse)
+(require racket/syntax syntax/parse racket/stxparam)
 (require (for-syntax racket/base racket/syntax syntax/parse))
+
+(define lox-nil 'nil)
 
 (define-syntax (lox-binary stx)
   (syntax-parse stx
@@ -31,6 +33,22 @@
     [(and (real? a) (nan? a)) #f]
     [(and (real? b) (nan? b)) #f]
     [else (eqv? a b)]))
+
+(define-syntax-parameter return-param 
+  (lambda (stx) (raise-syntax-error #f "return used outside of function" stx)))
+
+(define-syntax (lox-return stx)
+    (syntax-parse stx
+        [(_ val)
+            #'(return-param val)]))
+
+(define-syntax (lox-function stx)
+  (syntax-parse stx
+    [(_ name:id (arg:id ...) (stmt ...))
+     #'(define (name arg ...)
+         (let/ec k
+           (syntax-parameterize ([return-param (make-rename-transformer #'k)])
+             (lox-block stmt ...))))]))
 
 (define-syntax (lox-add stx)
   (with-syntax ([line (syntax-line stx)])
@@ -150,6 +168,9 @@
   (begin head ...))
 
 (provide lox-binary
+         lox-function
+         lox-return
+         lox-nil
          lox-var-declaration
          lox-assign
          lox-print
