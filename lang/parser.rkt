@@ -147,7 +147,16 @@
         (define value (expression))
         (consume 'SEMICOLON "Expect ';' after expression.")
         value)
-    (define (finish-call) (error 'finish-call-not-implemented))
+    (define (finish-call callee)
+        (define arguments #f)
+        (when (not (check 'RIGHT_PAREN))
+            (set! arguments (for/list (
+                [expr (in-producer expression)]
+                #:final (match 'COMMA)
+                #:when (lambda (el) (not (null? el))))
+                expr)))
+        (define paren (consume 'RIGHT_PAREN "Expect ')' after arguments."))
+        (datum->syntax #f `(lox-call ,callee ,arguments)))
     (define (call)
         (define expr (primary))
         (define c #t)

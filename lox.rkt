@@ -118,6 +118,11 @@
     [(_ cond then) #'(when cond then)]
     [(_ cond then else) #'(if cond then else)]))
 
+(define-syntax (lox-call stx)
+  (syntax-parse stx
+    [(_ callee #f) #'(callee)]
+    [(_ callee arg0 ...) #'(callee arg0 ...)]))
+
 (define-syntax (lox-class stx)
   (syntax-parse stx
     ;; 1. match the whole structure including the method list shape
@@ -181,7 +186,8 @@
          lox-literal
          lox-variable
          lox-if
-         lox-while)
+         lox-while
+         lox-call)
 
 ; (define lox-nil 'nil)
 
