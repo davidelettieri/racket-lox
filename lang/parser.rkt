@@ -13,7 +13,6 @@
         (token->src t)))
 
 (define (parse tokens)
-    ;(displayln tokens)
     (define _tokens (list->vector tokens))
     (define _current 0)
     (define (advance)
@@ -87,7 +86,7 @@
         (consume 'LEFT_BRACE (format "Expect '{' before ~a body" kind))
         (define body (block))
         (define name-id (token->symbol name))
-        (datum->syntax #f `(lox-function ,name-id ,parameters ,body)))
+        (datum->syntax #f `(lox-function ,name-id ,(map token->symbol parameters) ,body)))
     (define (var-declaration)
         (define name (consume 'IDENTIFIER "Expect variable name."))
         (define initializer
@@ -148,15 +147,13 @@
         (consume 'SEMICOLON "Expect ';' after expression.")
         value)
     (define (finish-call callee)
-        (define arguments #f)
+        (define arguments empty)
         (when (not (check 'RIGHT_PAREN))
-            (set! arguments (for/list (
-                [expr (in-producer expression)]
-                #:final (match 'COMMA)
-                #:when (lambda (el) (not (null? el))))
-                expr)))
+            (do 
+                (set! arguments (cons (expression) arguments))
+                while (match 'COMMA)))
         (define paren (consume 'RIGHT_PAREN "Expect ')' after arguments."))
-        (datum->syntax #f `(lox-call ,callee ,arguments)))
+        (datum->syntax #f `(lox-call ,callee ,@arguments)))
     (define (call)
         (define expr (primary))
         (define c #t)
@@ -241,7 +238,7 @@
             [(match 'WHILE) (while-statement)]
             [(match 'LEFT_BRACE) (block-statement)]
             [else (expression-statement)]))
-    ;(trace check check-next declaration var-declaration assignment print-statement expression or-syntax and-syntax factor unary term comparison equality call primary)
+    ;(trace declaration var-declaration assignment print-statement expression or-syntax and-syntax factor unary term comparison equality call primary finish-call)
     (for/list (
         [decl (in-producer declaration)]
         #:final (is-at-end?)
