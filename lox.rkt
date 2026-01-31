@@ -6,8 +6,10 @@
 (define lox-nil 'nil)
 
 (define-syntax (lox-unary stx)
-  (syntax-parse stx
-    [(_ BANG v:expr) #'(not v)]))
+  (syntax-parse stx 
+    #:datum-literals (BANG MINUS)
+    [(_ BANG v:expr) #'(not v)]
+    [(_ MINUS v:expr) #'(- v)]))
 
 (define-syntax (lox-binary stx)
   (syntax-parse stx

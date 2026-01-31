@@ -3,6 +3,8 @@
 (require "helpers.rkt" "scanner.rkt")
 (require syntax/parse racket/trace)
 
+(struct exn:fail:lox exn:fail (line) #:transparent)
+
 (define (token->src t)
     (token-srcloc t))
 
@@ -13,6 +15,18 @@
         (token->src t)))
 
 (define (parse tokens)
+    (define (synchronize)
+      (advance)
+      (let loop ()
+        (unless (is-at-end?)
+          (if (eqv? (token-type (previous)) 'SEMICOLON)
+              (void)
+              (case (token-type (peek))
+                [(CLASS FUN VAR FOR IF WHILE PRINT RETURN) (void)]
+                [else
+                 (advance)
+                 (loop)])))))
+    (define _hadError #f)
     (define _tokens (list->vector tokens))
     (define _current 0)
     (define (advance)
@@ -27,6 +41,14 @@
                             message)]
                    [stx (datum->syntax #f (token-lexeme tok) (token->src tok))])
               (raise-syntax-error 'parse msg stx))))
+    (define (parse-error token message)
+        (raise (exn:fail:lox 
+            (format "[line ~a] Error at '~a': ~a"
+                (srcloc-line (token-srcloc token))
+                (token-lexeme token)
+                message)
+            (current-continuation-marks)
+            (srcloc-line (token-srcloc token)))))
     (define (check type)
         (and (not (is-at-end?)) (eqv? (token-type (peek)) type)))
     (define (check-next type)
@@ -207,7 +229,7 @@
                         (syntax/loc expression (lox-assign name value))]
                     [(lox-get obj:expr name:expr)
                         (syntax/loc expression (lox-set obj name value))]
-                    [_ (raise-syntax-error 'parse "Invalid assignment target" equal)]))))
+                    [_ (parse-error equal "Invalid assignment target.")]))))
         expression)
     (define-syntax-rule (iterative-production name production . token-types)
         (define (name)
@@ -242,9 +264,22 @@
             [(match 'LEFT_BRACE) (block-statement)]
             [else (expression-statement)]))
     ;(trace block declaration block-statement statement for-statement var-declaration assignment print-statement expression or-syntax and-syntax factor unary term comparison equality call primary finish-call)
-    (for/list (
-        [decl (in-producer declaration)]
-        #:final (is-at-end?)
-        #:when (lambda (el) (not (null? el))))
-        decl))
+    (define (protected-declaration)
+      (with-handlers ([exn:fail:lox?
+                       (lambda (e)
+                         (set! _hadError #t)
+                         (synchronize)
+                         (displayln (exn-message e) (current-error-port))
+                         #'null)])
+        (declaration)))
+    (define statements
+        (if (is-at-end?) 
+            null 
+            (for/list (
+                [decl (in-producer protected-declaration)]
+                #:final (is-at-end?)
+                #:when (lambda (el) (not (null? el))))
+            decl)))
+    (when _hadError (exit 65))
+    statements)
 (provide parse)
