@@ -1,11 +1,4 @@
 #lang racket-lox
-{
-  var a = "before";
-  print a; // expect: before
-
-  a = "after";
-  print a; // expect: after
-
-  print a = "arg"; // expect: arg
-  print a; // expect: arg
-}
+print !true;    // expect: false
+print !false;   // expect: true
+print !!true;   // expect: true

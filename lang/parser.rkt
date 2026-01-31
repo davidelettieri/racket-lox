@@ -98,11 +98,14 @@
         (define statements (block))
         (datum->syntax #f `(lox-block ,@statements)))
     (define (block)
-        (define statements (for/list (
-            [decl (in-producer declaration)]
-            #:final (or (check 'RIGHT_BRACE) (is-at-end?))
-            #:when (lambda (el) (not (null? el))))
-            decl))
+        (define statements 
+            (if (or (check 'RIGHT_BRACE) (is-at-end?))
+                '()
+                (for/list (
+                [decl (in-producer declaration)]
+                #:final (or (check 'RIGHT_BRACE) (is-at-end?))
+                #:when (lambda (el) (not (null? el))))
+                decl)))
         (consume 'RIGHT_BRACE "Expect '}' after block.")
         statements)
     (define (for-statement)
@@ -226,7 +229,7 @@
             (call)
             (let ([op (previous)]) 
                 (define right (unary))
-                (datum->syntax #f `(lox-unary ,op ,right)))))
+                (datum->syntax #f `(lox-unary ,(token-type op) ,right)))))
     (define (expression)
         (assignment))
     (define (statement)
