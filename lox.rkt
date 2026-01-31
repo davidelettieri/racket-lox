@@ -162,9 +162,10 @@
     [(_ name:id)
       (syntax name)]))
 
-(define-syntax-rule (lox-block a ...)
-  (let ()
-    a ...))
+(define-syntax (lox-block stx)
+  (syntax-parse stx
+    [(_) #'(void)]
+    [(_ a ...) #'(let () a ...)]))
 
 (define-syntax-rule (lox-literal v)
   v)

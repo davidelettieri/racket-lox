@@ -98,9 +98,10 @@
         (define statements (block))
         (datum->syntax #f `(lox-block ,@statements)))
     (define (block)
+        (define (f) (if (or (check 'RIGHT_BRACE) (is-at-end?)) eof (declaration)))
         (define statements (for/list (
-            [decl (in-producer declaration)]
-            #:final (or (check 'RIGHT_BRACE) (is-at-end?))
+            [decl (in-producer f)]
+            #:break eof-object?
             #:when (lambda (el) (not (null? el))))
             decl))
         (consume 'RIGHT_BRACE "Expect '}' after block.")
@@ -238,7 +239,7 @@
             [(match 'WHILE) (while-statement)]
             [(match 'LEFT_BRACE) (block-statement)]
             [else (expression-statement)]))
-    ;(trace declaration var-declaration assignment print-statement expression or-syntax and-syntax factor unary term comparison equality call primary finish-call)
+    ;(trace declaration block-statement statement for-statement var-declaration assignment print-statement expression or-syntax and-syntax factor unary term comparison equality call primary finish-call)
     (for/list (
         [decl (in-producer declaration)]
         #:final (is-at-end?)
