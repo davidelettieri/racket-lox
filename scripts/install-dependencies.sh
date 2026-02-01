@@ -14,13 +14,5 @@ else
 	rm /tmp/racket-installer.sh
 fi
 
-# Install Racket packages
-if ! raco pkg show racket-langserver &> /dev/null; then
-	echo "Installing racket-langserver…"
-	raco pkg install --auto racket-langserver
-else
-	echo "racket-langserver is already installed"
-fi
-
 # Install local dependencies
 raco pkg install 

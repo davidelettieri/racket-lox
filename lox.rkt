@@ -14,25 +14,25 @@
 (define-syntax (lox-binary stx)
   (syntax-parse stx
     [(_ left:expr #\+ right:expr)
-      #'(lox-add left right)]
+      (syntax/loc stx (lox-add left right))]
     [(_ left:expr #\- right:expr)
-      #'(lox-subtract left right)]
+      (syntax/loc stx (lox-subtract left right))]
     [(_ left:expr #\> right:expr)
-      #'(lox-greater left right)]
+      (syntax/loc stx (lox-greater left right))]
     [(_ left:expr ">=" right:expr)
-      #'(lox-greater-equal left right)]
+      (syntax/loc stx (lox-greater-equal left right))]
     [(_ left:expr #\< right:expr)
-      #'(lox-less left right)]
+      (syntax/loc stx (lox-less left right))]
     [(_ left:expr "<=" right:expr)
-      #'(lox-less-equal left right)]
+      (syntax/loc stx (lox-less-equal left right))]
     [(_ left:expr #\/ right:expr)
-      #'(lox-divide left right)]
+      (syntax/loc stx (lox-divide left right))]
     [(_ left:expr #\* right:expr)
-      #'(lox-multiply left right)]
+      (syntax/loc stx (lox-multiply left right))]
     [(_ left:expr "!=" right:expr)
-      #'(not (lox-eqv? left right))]
+      (syntax/loc stx (not (lox-eqv? left right)))]
     [(_ left:expr "==" right:expr)
-      #'(lox-eqv? left right)]))
+      (syntax/loc stx (lox-eqv? left right))]))
 
 (define (lox-eqv? a b)
   (cond

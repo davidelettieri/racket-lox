@@ -3,23 +3,8 @@
 	"build": {
 		"dockerfile": "Dockerfile"
 	},
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"evzen-wybitul.magic-racket"
-			],
-			"settings": {
-				"[racket]": {
-					"editor.defaultFormatter": "evzen-wybitul.magic-racket",
-					"editor.formatOnSave": true
-				}
-			}
-		}
-	},
 	"remoteEnv": {
-		"PATH": "${containerEnv:PATH}:/usr/racket/bin",
-		"MY_REMOTE_VARIABLE": "some-other-value-here",
-		"MY_REMOTE_VARIABLE2": "${localEnv:SOME_LOCAL_VAR}"
+		"PATH": "${containerEnv:PATH}:/usr/racket/bin"
 	},
 	"postCreateCommand": "bash scripts/install-dependencies.sh"
 }

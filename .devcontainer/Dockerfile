@@ -1,13 +1,7 @@
 # Stage 1: Base image with Dart
 FROM debian:bullseye as dart-base
 
-RUN apt-get update -y && apt-get install -y \
-    wget \
-    libcairo2 \
-    libglib2.0-0 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libgtk2.0-0
+RUN apt-get update -y && apt-get install -y wget
 
 ARG DART_VERSION=2.19.6
 ARG DART_DEB=dart_${DART_VERSION}-1_amd64.deb

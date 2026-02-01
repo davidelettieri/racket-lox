@@ -195,7 +195,7 @@
         (cond
             [(match 'FALSE) (datum->syntax #f `(lox-literal ,#f) (token->src (previous)))]
             [(match 'TRUE) (datum->syntax #f `(lox-literal ,#t) (token->src (previous)))]
-            [(match 'NIL) (datum->syntax #f #'(lox-nil) (token->src (previous)))]
+            [(match 'NIL) (datum->syntax #f #'lox-nil (token->src (previous)))]
             [(match 'STRING) (datum->syntax #f `(lox-literal ,(token-lexeme (previous))) (token->src (previous)))]
             [(match 'NUMBER) (datum->syntax #f `(lox-literal ,(token-literal (previous))) (token->src (previous)))]
             [(match 'SUPER) 
@@ -238,7 +238,7 @@
                 (define op (previous))
                 (define right (production))
                 (define op-name (token-lexeme op))
-                (set! expr (datum->syntax #f `(lox-binary ,expr ,op-name ,right))))
+                (set! expr (datum->syntax #f `(lox-binary ,expr ,op-name ,right) (token->src op))))
             expr))
     (iterative-production factor unary 'SLASH 'STAR)
     (iterative-production term factor 'MINUS 'PLUS)
@@ -251,7 +251,7 @@
             (call)
             (let ([op (previous)]) 
                 (define right (unary))
-                (datum->syntax #f `(lox-unary ,(token-type op) ,right)))))
+                (datum->syntax #f `(lox-unary ,(token-type op) ,right) (token->src op)))))
     (define (expression)
         (assignment))
     (define (statement)
