@@ -9,7 +9,7 @@ if command -v racket &> /dev/null; then
 	echo "Racket is already installed: $(racket --version)"
 else
 	echo "Racket not found, installing…"
-TEMP_INSTALLER=$(mktemp /tmp/racket-installer.XXXXXX.sh)
+	curl -L -o /tmp/racket-installer.sh https://download.racket-lang.org/installers/9.0/racket-9.0-x86_64-linux-bullseye-cs.sh
 curl -L -o "$TEMP_INSTALLER" https://download.racket-lang.org/installers/9.0/racket-9.0-x86_64-linux-buster-cs.sh
 bash "$TEMP_INSTALLER" --dest /usr/racket
 rm "$TEMP_INSTALLER"
