@@ -42,7 +42,7 @@
              (values (list->string (reverse chars)) 'error #f start (+ start 1 (length chars)) 0 mode)]
             [(eqv? n #\")
              (read-char in)
-             (values "string" 'string #f start (+ start 2 (length chars)) 0 mode)]
+             (values (string-append "\"" (list->string (reverse chars)) "\"") 'string #f start (+ start 2 (length chars)) 0 mode)]
             [else
              (read-char in)
              (set! chars (cons n chars))
@@ -63,7 +63,7 @@
                 (when (numeric? (peek-char in))
                    (set! chars (cons (read-char in) chars))
                    (loop-fract)))]))
-        (values "number" 'constant #f start (+ start (length chars)) 0 mode)]
+        (values (list->string (reverse chars)) 'constant #f start (+ start (length chars)) 0 mode)]
 
        ;; Identifiers and Keywords
        [(or (char-alphabetic? c) (eqv? c #\_))
