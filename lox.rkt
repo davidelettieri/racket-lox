@@ -1,7 +1,23 @@
 #lang racket
 
 (require racket/syntax syntax/parse racket/stxparam)
-(require (for-syntax racket/base racket/syntax syntax/parse))
+(require (for-syntax racket/base racket/syntax syntax/parse racket/set))
+
+(begin-for-syntax
+  (define (resolve-redefinitions stmts)
+    (define defined-vars (mutable-set))
+    (define (replace-stmt stmt)
+      (syntax-parse stmt
+        #:datum-literals (lox-var-declaration)
+        [(lox-var-declaration name:id val:expr)
+         (define sym (syntax-e #'name))
+         (if (set-member? defined-vars sym)
+             #'(lox-assign name val)
+             (begin
+               (set-add! defined-vars sym)
+               stmt))]
+        [other #'other]))
+    (map replace-stmt stmts)))
 
 (define lox-nil 'nil)
 
@@ -179,7 +195,22 @@
 (define-syntax (lox-block stx)
   (syntax-parse stx
     [(_) #'(void)]
-    [(_ a ...) #'(let () a ...)]))
+    [(_ stmt ...)
+     (expand-block-stmts #'(stmt ...))]))
+
+(begin-for-syntax
+  (define (expand-block-stmts stmts)
+    (syntax-parse stmts
+      [() #'(void)]
+      [(stmt . rest)
+       (syntax-parse #'stmt
+         #:datum-literals (lox-var-declaration)
+         [(lox-var-declaration name val)
+          (with-syntax ([body (expand-block-stmts #'rest)])
+            #'(let ([name val]) body))]
+         [other
+          (with-syntax ([body (expand-block-stmts #'rest)])
+            #'(begin other body))])])))
 
 (define-syntax-rule (lox-grouping expr)
   expr)
@@ -215,7 +246,8 @@
          lox-while
          lox-call
          lox-grouping
-         lox-top)
+         lox-top
+         (for-syntax resolve-redefinitions))
 
 ; (define lox-nil 'nil)
 

@@ -1,2 +1,9 @@
 #lang racket-lox
--"s"; // expect runtime error: Operand must be a number.
+{
+  var a = "outer";
+  {
+    print a; // expect: outer
+    var a = "inner";
+    print a; // expect: inner
+  }
+}

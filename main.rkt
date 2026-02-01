@@ -7,8 +7,9 @@
 (define-syntax custom-module-begin
   (syntax-parser
    [(_ forms:expr ...)
-    #'(#%plain-module-begin ;; use module-begin to have expressions printed out
-       forms ...)]))
+    (with-syntax ([(fixed-forms ...) (resolve-redefinitions (syntax->list #'(forms ...)))])
+      #'(#%plain-module-begin ;; use module-begin to have expressions printed out
+         fixed-forms ...))]))
 
 (provide [rename-out (custom-module-begin #%module-begin)
                       (lox-top #%top)] 
