@@ -10,4 +10,7 @@
     #'(#%plain-module-begin ;; use module-begin to have expressions printed out
        forms ...)]))
 
-(provide [rename-out (custom-module-begin #%module-begin)] #%datum #%app #%top-interaction (all-from-out "lox.rkt"))
+(provide [rename-out (custom-module-begin #%module-begin)
+                      (lox-top #%top)] 
+         #%datum #%app #%top-interaction 
+         (except-out (all-from-out "lox.rkt") lox-top))

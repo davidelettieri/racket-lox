@@ -190,6 +190,13 @@
 (define-syntax-rule (lox-declarations head ...)
   (begin head ...))
 
+(define-syntax (lox-top stx)
+  (syntax-parse stx
+    [(_ . id:id)
+     (with-syntax ([line (or (syntax-line #'id) (syntax-line stx) 0)]
+                   [str-id (symbol->string (syntax-e #'id))])
+       #'(lox-runtime-error (format "Undefined variable '~a'." str-id) line))]))
+
 (provide lox-unary
          lox-binary
          lox-function
@@ -207,7 +214,8 @@
          lox-if
          lox-while
          lox-call
-         lox-grouping)
+         lox-grouping
+         lox-top)
 
 ; (define lox-nil 'nil)
 
