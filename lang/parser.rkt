@@ -38,9 +38,8 @@
             (let* ([tok (peek)]
                    [msg (if (string=? message "")
                             (format "Expect ~a." type)
-                            message)]
-                   [stx (datum->syntax #f (token-lexeme tok) (token->src tok))])
-              (raise-syntax-error 'parse msg stx))))
+                            message)])
+              (parse-error tok msg))))
     (define (parse-error token message)
         (raise (exn:fail:lox 
             (format "[line ~a] Error at '~a': ~a"
@@ -208,9 +207,7 @@
             [(match 'LEFT_PAREN) (let ([expr (expression)])
                 (consume 'RIGHT_PAREN "Expect ')' after expression")
                 (datum->syntax #f `(lox-grouping ,expr)))]
-            [else (let* ([tok (peek)]
-                         [stx (datum->syntax #f (token-lexeme tok) (token->src tok))]) 
-                         (raise-syntax-error 'parse "Expect expression." stx))]))
+            [else (parse-error (peek) "Expect expression.")]))
     (define (print-statement)
         (define print-token (previous))
         (define value (expression))
@@ -251,7 +248,7 @@
             (call)
             (let ([op (previous)]) 
                 (define right (unary))
-                (datum->syntax #f `(lox-unary ,(token-type op) ,right) (token->src op)))))
+                (datum->syntax #f `(lox-unary ,(token-type op) ,right)))))
     (define (expression)
         (assignment))
     (define (statement)

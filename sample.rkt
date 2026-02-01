@@ -1,2 +1,4 @@
 #lang racket-lox
-true + nil; // expect runtime error: Operands must be two numbers or two strings.
+print -(3); // expect: -3.0
+print --(3); // expect: 3.0
+print ---(3); // expect: -3.0

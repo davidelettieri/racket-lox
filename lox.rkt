@@ -173,6 +173,9 @@
     [(_) #'(void)]
     [(_ a ...) #'(let () a ...)]))
 
+(define-syntax-rule (lox-grouping expr)
+  expr)
+
 (define-syntax-rule (lox-literal v)
   v)
 
@@ -195,7 +198,8 @@
          lox-variable
          lox-if
          lox-while
-         lox-call)
+         lox-call
+         lox-grouping)
 
 ; (define lox-nil 'nil)
 
