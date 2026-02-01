@@ -98,8 +98,8 @@
         (define parameters '())
         (when (not (check 'RIGHT_PAREN))
             (do 
-                (when (> (length parameters) 256)
-                    (raise "Too many parameters"))
+                (when (> (length parameters) 255)
+                    (parse-error (peek) "Can't have more than 255 parameters."))
                 (set! parameters (cons (consume 'IDENTIFIER "Expect parameter name") parameters))
             while
                 (match 'COMMA)))
@@ -124,7 +124,7 @@
             (if (or (check 'RIGHT_BRACE) (is-at-end?))
                 '()
                 (for/list (
-                [decl (in-producer declaration)]
+                [decl (in-producer protected-declaration)]
                 #:final (or (check 'RIGHT_BRACE) (is-at-end?))
                 #:when (lambda (el) (not (null? el))))
                 decl)))
