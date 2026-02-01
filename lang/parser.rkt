@@ -91,7 +91,7 @@
             (set! methods (cons (function "method") methods)))
         (consume 'RIGHT_BRACE "Expect '}' after class body.")
         (define name-id (token->symbol name))
-        (datum->syntax #f `(lox-class ,name-id ,superclass ,methods)))
+        (datum->syntax #f `(lox-class ,name-id ,superclass ,methods) (token->src name)))
     (define (function kind)
         (define name (consume 'IDENTIFIER (format "Expect ~a name." kind)))
         (consume 'LEFT_PAREN (format "Expect '(' after ~a name." kind))
@@ -107,17 +107,18 @@
         (consume 'LEFT_BRACE (format "Expect '{' before ~a body" kind))
         (define body (block))
         (define name-id (token->symbol name))
-        (datum->syntax #f `(lox-function ,name-id ,(map token->symbol parameters) ,body)))
+        (datum->syntax #f `(lox-function ,name-id ,(map token->symbol parameters) ,body) (token->src name)))
     (define (var-declaration)
         (define name (consume 'IDENTIFIER "Expect variable name."))
         (define initializer
-            (if (match 'EQUAL) (expression) #f))
+            (if (match 'EQUAL) (expression) #'lox-nil))
         (consume 'SEMICOLON "Expect ';' after variable declaration.")
         (define name-id (token->symbol name))
-        (datum->syntax #f `(lox-var-declaration ,name-id ,initializer)))
+        (datum->syntax #f `(lox-var-declaration ,name-id ,initializer) (token->src name)))
     (define (block-statement)
+        (define brace (previous))
         (define statements (block))
-        (datum->syntax #f `(lox-block ,@statements)))
+        (datum->syntax #f `(lox-block ,@statements) (token->src brace)))
     (define (block)
         (define statements 
             (if (or (check 'RIGHT_BRACE) (is-at-end?))
@@ -130,29 +131,31 @@
         (consume 'RIGHT_BRACE "Expect '}' after block.")
         statements)
     (define (for-statement)
+        (define for-keyword (previous))
         (consume 'LEFT_PAREN "Expect '(' after 'for'.")
         (define initializer 
             (cond 
                 [(match 'SEMICOLON) #f]
                 [(match 'VAR) (var-declaration)]
                 [else (expression-statement)]))
-        (define condition (if (check 'SEMICOLON) (datum->syntax #f `(lox-literal #t)) (expression)))
+        (define condition (if (check 'SEMICOLON) (datum->syntax #f `(lox-literal #t) (token->src for-keyword)) (expression)))
         (consume 'SEMICOLON "Expect ';' after loop condition.")
         (define increment (if (check 'RIGHT_PAREN) #f (expression)))
         (consume 'RIGHT_PAREN "Expect ')' after for clauses.")
         (define body (statement))
-        (when increment (set! body (datum->syntax #f `(lox-block ,body ,increment))))
-        (set! body (datum->syntax #f `(lox-while ,condition ,body)))
-        (when initializer (set! body (datum->syntax #f `(lox-block ,initializer ,body))))
+        (when increment (set! body (datum->syntax #f `(lox-block ,body ,increment) (token->src for-keyword))))
+        (set! body (datum->syntax #f `(lox-while ,condition ,body) (token->src for-keyword)))
+        (when initializer (set! body (datum->syntax #f `(lox-block ,initializer ,body) (token->src for-keyword))))
         body)
     (define (if-statement)
+        (define if-keyword (previous))
         (consume 'LEFT_PAREN "Expect '(' after if.")
         (define expr (expression))
         (consume 'RIGHT_PAREN "Expect ')' after if.")
         (define then (statement))
         (if (match 'ELSE)
-            (datum->syntax #f `(lox-if ,expr ,then ,(statement)))
-            (datum->syntax #f `(lox-if ,expr ,then))))
+            (datum->syntax #f `(lox-if ,expr ,then ,(statement)) (token->src if-keyword))
+            (datum->syntax #f `(lox-if ,expr ,then) (token->src if-keyword))))
     (define (return-statement)
         (define keyword (previous))
         (define value (if (check 'SEMICOLON)
@@ -161,23 +164,25 @@
         (consume 'SEMICOLON "Expect ';' after return value.")
         (datum->syntax #f `(lox-return ,value) (token->src keyword)))
     (define (while-statement)
+        (define while-keyword (previous))
         (consume 'LEFT_PAREN "Expect '(' after 'while'.")
         (define expr (expression))
         (consume 'RIGHT_PAREN "Expect ')' after condition.")
         (define stmt (statement))
-        (datum->syntax #f `(lox-while ,expr ,stmt)))
+        (datum->syntax #f `(lox-while ,expr ,stmt) (token->src while-keyword)))
     (define (expression-statement)
         (define value (expression))
         (consume 'SEMICOLON "Expect ';' after expression.")
         value)
     (define (finish-call callee)
         (define arguments empty)
+        (define paren (previous))
         (when (not (check 'RIGHT_PAREN))
             (do 
                 (set! arguments (cons (expression) arguments))
                 while (match 'COMMA)))
-        (define paren (consume 'RIGHT_PAREN "Expect ')' after arguments."))
-        (datum->syntax #f `(lox-call ,callee ,@arguments)))
+        (consume 'RIGHT_PAREN "Expect ')' after arguments.")
+        (datum->syntax #f `(lox-call ,callee ,@arguments) (token->src paren)))
     (define (call)
         (define expr (primary))
         (define c #t)
@@ -185,9 +190,10 @@
             (cond 
                 [(match 'LEFT_PAREN) (set! expr (finish-call expr))]
                 [(match 'DOT) (begin
+                                (define dot (previous))
                                 (define name (consume 'IDENTIFIER "Expect property name after '.'."))
                                 (set! expr 
-                                    (datum->syntax #f `(lox-get ,expr ,name))))]
+                                    (datum->syntax #f `(lox-get ,expr ,name) (token->src dot))))]
                 [else (set! c #f)]))
         expr)
     (define (primary)
@@ -201,12 +207,12 @@
                 (let ([keyword (previous)])
                     (consume 'DOT "Expect '.' after 'super'.")
                     (define method (consume 'IDENTIFIER "Expect superclass method name."))
-                    (datum->syntax #f `(lox-super ,keyword ,method)))]
-            [(match 'THIS) (datum->syntax #f `(lox-this ,(previous)))]
+                    (datum->syntax #f `(lox-super ,keyword ,method) (token->src keyword)))]
+            [(match 'THIS) (datum->syntax #f `(lox-this ,(previous)) (token->src (previous)))]
             [(match 'IDENTIFIER) (datum->syntax #f `(lox-variable ,(token->symbol (previous))) (token->src (previous)))]
-            [(match 'LEFT_PAREN) (let ([expr (expression)])
+            [(match 'LEFT_PAREN) (let ([paren (previous)] [expr (expression)])
                 (consume 'RIGHT_PAREN "Expect ')' after expression")
-                (datum->syntax #f `(lox-grouping ,expr)))]
+                (datum->syntax #f `(lox-grouping ,expr) (token->src paren)))]
             [else (parse-error (peek) "Expect expression.")]))
     (define (print-statement)
         (define print-token (previous))
@@ -248,7 +254,7 @@
             (call)
             (let ([op (previous)]) 
                 (define right (unary))
-                (datum->syntax #f `(lox-unary ,(token-type op) ,right)))))
+                (datum->syntax #f `(lox-unary ,(token-type op) ,right) (token->src op)))))
     (define (expression)
         (assignment))
     (define (statement)

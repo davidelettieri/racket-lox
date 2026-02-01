@@ -9,7 +9,15 @@
   (syntax-parse stx 
     #:datum-literals (BANG MINUS)
     [(_ BANG v:expr) #'(not v)]
-    [(_ MINUS v:expr) #'(- v)]))
+    [(_ MINUS v:expr) (syntax/loc stx (lox-negate v))]))
+    
+(define-syntax (lox-negate stx)
+  (with-syntax ([line (syntax-line stx)])
+    (syntax-case stx ()
+      [(_ a) (syntax (lox-negate-impl a line))])))
+(define (lox-negate-impl a line)
+  (if (number? a) (- a) (lox-runtime-error "Operand must be a number." line)))
+
 
 (define-syntax (lox-binary stx)
   (syntax-parse stx
@@ -219,14 +227,6 @@
 
 
 
-
-; (define-syntax (lox-negate stx)
-;   (with-syntax ([line (syntax-line stx)])
-;     (syntax-case stx ()
-;       [(_ a) (syntax (lox-negate-impl a line))])))
-
-; (define (lox-negate-impl a line)
-;   (if (number? a) (- a) (lox-runtime-error "Operand must be a number." line)))
 
 
 

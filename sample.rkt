@@ -1,4 +1,2 @@
 #lang racket-lox
-print -(3); // expect: -3.0
-print --(3); // expect: 3.0
-print ---(3); // expect: -3.0
+-"s"; // expect runtime error: Operand must be a number.
