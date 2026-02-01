@@ -129,10 +129,14 @@
 (define-syntax (lox-assign stx)
   (syntax-parse stx
     [(_ name:id val:expr)
-      #'(begin
-      (let [(c val)]
-        (set! name c)
-        c))]))
+     (if (identifier-binding #'name)
+         #'(begin
+             (let [(c val)]
+               (set! name c)
+               c))
+         (with-syntax ([line (or (syntax-line #'name) (syntax-line stx) 0)]
+                       [str-id (symbol->string (syntax-e #'name))])
+           #'(lox-runtime-error (format "Undefined variable '~a'." str-id) line)))]))
 
 (define (lox-print value)
   (cond

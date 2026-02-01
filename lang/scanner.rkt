@@ -119,7 +119,9 @@
 (define (string-token input-port line col pos)
   (define chars '())
   (while-not-char-not-end input-port #\" (set! chars (cons (read-char input-port) chars)))
-  (when (is-at-end? input-port) (error "Unterminated string."))
+  (when (is-at-end? input-port)
+    (displayln (format "[line ~a] Error: Unterminated string." line) (current-error-port))
+    (exit 65))
   (read-char input-port)
   (define value (list->string (reverse chars)))
   (token 'STRING value #f
