@@ -16,3 +16,5 @@ I think the right racket representation for numbers is `flonums`, I'm forcing th
 
 To run on checkout or after modifying lox.rkt: raco setup
 How to run tests: raco test -x -p racket-lox
+
+How to run single test file: raco test lang/parser-tests.rkt
