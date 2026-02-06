@@ -18,3 +18,5 @@ To run on checkout or after modifying lox.rkt: raco setup
 How to run tests: raco test -x -p racket-lox
 
 How to run single test file: raco test lang/parser-tests.rkt
+
+How to update the package in the system: raco setup racket-lox

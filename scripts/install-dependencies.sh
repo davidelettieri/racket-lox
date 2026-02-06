@@ -16,4 +16,4 @@ else
 fi
 
 # Install local dependencies
-raco pkg install 
+raco pkg install --no-docs
