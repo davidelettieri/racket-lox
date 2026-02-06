@@ -37,25 +37,26 @@
 
 (define-syntax (lox-binary stx)
   (syntax-parse stx
-    [(_ left:expr #\+ right:expr)
+    #:datum-literals (PLUS MINUS GREATER GREATER_EQUAL LESS LESS_EQUAL SLASH STAR BANG_EQUAL EQUAL_EQUAL) 
+    [(_ left:expr PLUS right:expr)
       (syntax/loc stx (lox-add left right))]
-    [(_ left:expr #\- right:expr)
+    [(_ left:expr MINUS right:expr)
       (syntax/loc stx (lox-subtract left right))]
-    [(_ left:expr #\> right:expr)
+    [(_ left:expr GREATER right:expr)
       (syntax/loc stx (lox-greater left right))]
-    [(_ left:expr ">=" right:expr)
+    [(_ left:expr GREATER_EQUAL right:expr)
       (syntax/loc stx (lox-greater-equal left right))]
-    [(_ left:expr #\< right:expr)
+    [(_ left:expr LESS right:expr)
       (syntax/loc stx (lox-less left right))]
-    [(_ left:expr "<=" right:expr)
+    [(_ left:expr LESS_EQUAL right:expr)
       (syntax/loc stx (lox-less-equal left right))]
-    [(_ left:expr #\/ right:expr)
+    [(_ left:expr SLASH right:expr)
       (syntax/loc stx (lox-divide left right))]
-    [(_ left:expr #\* right:expr)
+    [(_ left:expr STAR right:expr)
       (syntax/loc stx (lox-multiply left right))]
-    [(_ left:expr "!=" right:expr)
+    [(_ left:expr BANG_EQUAL right:expr)
       (syntax/loc stx (not (lox-eqv? left right)))]
-    [(_ left:expr "==" right:expr)
+    [(_ left:expr EQUAL_EQUAL right:expr)
       (syntax/loc stx (lox-eqv? left right))]))
 
 (define (lox-eqv? a b)

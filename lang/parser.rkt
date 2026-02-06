@@ -175,12 +175,15 @@
         (consume 'SEMICOLON "Expect ';' after expression.")
         value)
     (define (finish-call callee)
-        (define arguments empty)
         (define paren (previous))
-        (when (not (check 'RIGHT_PAREN))
-            (do 
-                (set! arguments (cons (expression) arguments))
-                while (match 'COMMA)))
+        (define arguments 
+            (if (check 'RIGHT_PAREN) 
+                empty 
+                (for/list (
+                    [arg (in-producer expression)]
+                    #:final (check 'RIGHT_PAREN))
+                    (match 'COMMA)
+                    arg)))
         (consume 'RIGHT_PAREN "Expect ')' after arguments.")
         (datum->syntax #f `(lox-call ,callee ,@arguments) (token->src paren)))
     (define (call)
@@ -240,8 +243,8 @@
             (while (match . token-types)
                 (define op (previous))
                 (define right (production))
-                (define op-name (token-lexeme op))
-                (set! expr (datum->syntax #f `(lox-binary ,expr ,op-name ,right) (token->src op))))
+                (define op-type (token-type op))
+                (set! expr (datum->syntax #f `(lox-binary ,expr ,op-type ,right) (token->src op))))
             expr))
     (iterative-production factor unary 'SLASH 'STAR)
     (iterative-production term factor 'MINUS 'PLUS)
