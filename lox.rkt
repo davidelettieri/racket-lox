@@ -199,14 +199,14 @@
 
 (define-syntax (lox-block stx)
   (syntax-parse stx
-    [(_) #'(void)]
+    [(_) #'lox-nil]
     [(_ stmt ...)
      (expand-block-stmts #'(stmt ...))]))
 
 (begin-for-syntax
   (define (expand-block-stmts stmts)
     (syntax-parse stmts
-      [() #'(void)]
+      [() #'lox-nil]
       [(stmt . rest)
        (syntax-parse #'stmt
          #:datum-literals (lox-var-declaration)
@@ -255,11 +255,6 @@
          (for-syntax resolve-redefinitions))
 
 ; (define lox-nil 'nil)
-
-
-
-; (define-syntax-rule (lox-empty-program)
-;   (void))
 
 
 
