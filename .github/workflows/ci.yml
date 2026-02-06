@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Racket
+        uses: Bogdanp/setup-racket@fda0f4d167468421766cea8a36140bd2c3c3450d
+        with:
+          version: "9.0"
+
+      - name: Install package
+        run: raco pkg install --auto --link "$GITHUB_WORKSPACE"
+
+      - name: Run tests
+        run: raco test -x -p racket-lox
