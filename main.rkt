@@ -1,6 +1,6 @@
 #lang racket
 
-(require 
+(require
   "lox.rkt"
   (for-syntax racket/base syntax/parse))
 
@@ -12,6 +12,6 @@
          fixed-forms ...))]))
 
 (provide [rename-out (custom-module-begin #%module-begin)
-                      (lox-top #%top)] 
-         #%datum #%app #%top-interaction 
+                      (lox-top #%top)]
+         #%datum #%app #%top-interaction
          (except-out (all-from-out "lox.rkt") lox-top))

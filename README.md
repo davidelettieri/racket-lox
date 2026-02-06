@@ -1,7 +1,7 @@
 racket-lox
 ==========
 
-Here my **failed** attempt at implementing Lox language from crafting interpreters book as a racket language module. 
+Here my **failed** attempt at implementing Lox language from crafting interpreters book as a racket language module.
 
 # racket numbers note
 
@@ -16,3 +16,7 @@ I think the right racket representation for numbers is `flonums`, I'm forcing th
 
 To run on checkout or after modifying lox.rkt: raco setup
 How to run tests: raco test -x -p racket-lox
+
+How to run single test file: raco test lang/parser-tests.rkt
+
+How to update the package in the system: raco setup racket-lox

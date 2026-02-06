@@ -22,11 +22,11 @@
 (define lox-nil 'nil)
 
 (define-syntax (lox-unary stx)
-  (syntax-parse stx 
+  (syntax-parse stx
     #:datum-literals (BANG MINUS)
     [(_ BANG v:expr) #'(not v)]
     [(_ MINUS v:expr) (syntax/loc stx (lox-negate v))]))
-    
+
 (define-syntax (lox-negate stx)
   (with-syntax ([line (syntax-line stx)])
     (syntax-case stx ()
@@ -37,25 +37,26 @@
 
 (define-syntax (lox-binary stx)
   (syntax-parse stx
-    [(_ left:expr #\+ right:expr)
+    #:datum-literals (PLUS MINUS GREATER GREATER_EQUAL LESS LESS_EQUAL SLASH STAR BANG_EQUAL EQUAL_EQUAL)
+    [(_ left:expr PLUS right:expr)
       (syntax/loc stx (lox-add left right))]
-    [(_ left:expr #\- right:expr)
+    [(_ left:expr MINUS right:expr)
       (syntax/loc stx (lox-subtract left right))]
-    [(_ left:expr #\> right:expr)
+    [(_ left:expr GREATER right:expr)
       (syntax/loc stx (lox-greater left right))]
-    [(_ left:expr ">=" right:expr)
+    [(_ left:expr GREATER_EQUAL right:expr)
       (syntax/loc stx (lox-greater-equal left right))]
-    [(_ left:expr #\< right:expr)
+    [(_ left:expr LESS right:expr)
       (syntax/loc stx (lox-less left right))]
-    [(_ left:expr "<=" right:expr)
+    [(_ left:expr LESS_EQUAL right:expr)
       (syntax/loc stx (lox-less-equal left right))]
-    [(_ left:expr #\/ right:expr)
+    [(_ left:expr SLASH right:expr)
       (syntax/loc stx (lox-divide left right))]
-    [(_ left:expr #\* right:expr)
+    [(_ left:expr STAR right:expr)
       (syntax/loc stx (lox-multiply left right))]
-    [(_ left:expr "!=" right:expr)
+    [(_ left:expr BANG_EQUAL right:expr)
       (syntax/loc stx (not (lox-eqv? left right)))]
-    [(_ left:expr "==" right:expr)
+    [(_ left:expr EQUAL_EQUAL right:expr)
       (syntax/loc stx (lox-eqv? left right))]))
 
 (define (lox-eqv? a b)
@@ -64,7 +65,7 @@
     [(and (real? b) (nan? b)) #f]
     [else (eqv? a b)]))
 
-(define-syntax-parameter return-param 
+(define-syntax-parameter return-param
   (lambda (stx) (raise-syntax-error #f "return used outside of function" stx)))
 
 (define-syntax (lox-return stx)
@@ -161,10 +162,10 @@
   (syntax-parse stx
     ;; 1. match the whole structure including the method list shape
     [(_ name:id #f ((mname:id (marg:id ...) mbody:expr ...) ...))
-     
+
      ;; 2. Create the class name identifier
      (with-syntax ([class-name (format-id #'name "~a%" #'name)])
-       
+
        ;; 3. Output the final syntax
        #'(define class-name
            (class object%
@@ -173,7 +174,7 @@
              (define/public (mname marg ...)
                mbody ...) ...)))]
     [(_ name:id superclass ((mname:id (marg:id ...) mbody:expr ...) ...))
-     
+
      ;; 2. Create the class name identifier
      (with-syntax ([class-name (format-id #'name "~a%" #'name)]
                    [superclass-name (format-id #'superclass "~a%" #'superclass)])
@@ -198,14 +199,14 @@
 
 (define-syntax (lox-block stx)
   (syntax-parse stx
-    [(_) #'(void)]
+    [(_) #'lox-nil]
     [(_ stmt ...)
      (expand-block-stmts #'(stmt ...))]))
 
 (begin-for-syntax
   (define (expand-block-stmts stmts)
     (syntax-parse stmts
-      [() #'(void)]
+      [() #'lox-nil]
       [(stmt . rest)
        (syntax-parse #'stmt
          #:datum-literals (lox-var-declaration)
@@ -254,11 +255,6 @@
          (for-syntax resolve-redefinitions))
 
 ; (define lox-nil 'nil)
-
-
-
-; (define-syntax-rule (lox-empty-program)
-;   (void))
 
 
 

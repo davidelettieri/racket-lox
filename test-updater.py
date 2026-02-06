@@ -14,7 +14,7 @@ for f in glob.glob('craftinginterpreters/test/**/*.lox', recursive=True):
         content = h.read()
         updatedContent = content
         updated = False
-        matches = re.search(r"// expect: (-?\d+)\n", content) 
+        matches = re.search(r"// expect: (-?\d+)\n", content)
         if matches is not None:
             updatedContent = re.sub(r"// expect: (-?\d+)\n", addDecimal, content)
             updated = True
@@ -29,4 +29,3 @@ for f in glob.glob('craftinginterpreters/test/**/*.lox', recursive=True):
             h.write(updatedContent)
 
     print("Update complete for",f)
-    
