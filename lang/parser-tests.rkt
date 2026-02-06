@@ -41,7 +41,7 @@
   (test-case "fun declaration"
     (parse-and-assert 
      "fun f(a, b) {}"
-     '((lox-function f (b a) ()))))
+     '((lox-function f (a b) ()))))
 
   (test-case "var declaration"
     (parse-and-assert "var c;" '((lox-var-declaration c lox-nil))))

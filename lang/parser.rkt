@@ -95,14 +95,18 @@
     (define (function kind)
         (define name (consume 'IDENTIFIER (format "Expect ~a name." kind)))
         (consume 'LEFT_PAREN (format "Expect '(' after ~a name." kind))
-        (define parameters '())
-        (when (not (check 'RIGHT_PAREN))
-            (do 
-                (when (> (length parameters) 255)
-                    (parse-error (peek) "Can't have more than 255 parameters."))
-                (set! parameters (cons (consume 'IDENTIFIER "Expect parameter name") parameters))
-            while
-                (match 'COMMA)))
+        (define count 0)
+        (define parameters 
+            (if (check 'RIGHT_PAREN) 
+                empty 
+                (for/list (
+                    [param (in-producer (lambda () (consume 'IDENTIFIER "Expect parameter name")))]
+                    #:final (check 'RIGHT_PAREN))
+                    (set! count (+ count 1))
+                    (match 'COMMA)
+                    (when (> count 255)
+                        (parse-error (peek) "Can't have more than 255 parameters."))
+                    param)))
         (consume 'RIGHT_PAREN "Expect ')' after parameters.")
         (consume 'LEFT_BRACE (format "Expect '{' before ~a body" kind))
         (define body (block))
