@@ -22,11 +22,11 @@
 (define lox-nil 'nil)
 
 (define-syntax (lox-unary stx)
-  (syntax-parse stx 
+  (syntax-parse stx
     #:datum-literals (BANG MINUS)
     [(_ BANG v:expr) #'(not v)]
     [(_ MINUS v:expr) (syntax/loc stx (lox-negate v))]))
-    
+
 (define-syntax (lox-negate stx)
   (with-syntax ([line (syntax-line stx)])
     (syntax-case stx ()
@@ -37,7 +37,7 @@
 
 (define-syntax (lox-binary stx)
   (syntax-parse stx
-    #:datum-literals (PLUS MINUS GREATER GREATER_EQUAL LESS LESS_EQUAL SLASH STAR BANG_EQUAL EQUAL_EQUAL) 
+    #:datum-literals (PLUS MINUS GREATER GREATER_EQUAL LESS LESS_EQUAL SLASH STAR BANG_EQUAL EQUAL_EQUAL)
     [(_ left:expr PLUS right:expr)
       (syntax/loc stx (lox-add left right))]
     [(_ left:expr MINUS right:expr)
@@ -65,7 +65,7 @@
     [(and (real? b) (nan? b)) #f]
     [else (eqv? a b)]))
 
-(define-syntax-parameter return-param 
+(define-syntax-parameter return-param
   (lambda (stx) (raise-syntax-error #f "return used outside of function" stx)))
 
 (define-syntax (lox-return stx)
@@ -162,10 +162,10 @@
   (syntax-parse stx
     ;; 1. match the whole structure including the method list shape
     [(_ name:id #f ((mname:id (marg:id ...) mbody:expr ...) ...))
-     
+
      ;; 2. Create the class name identifier
      (with-syntax ([class-name (format-id #'name "~a%" #'name)])
-       
+
        ;; 3. Output the final syntax
        #'(define class-name
            (class object%
@@ -174,7 +174,7 @@
              (define/public (mname marg ...)
                mbody ...) ...)))]
     [(_ name:id superclass ((mname:id (marg:id ...) mbody:expr ...) ...))
-     
+
      ;; 2. Create the class name identifier
      (with-syntax ([class-name (format-id #'name "~a%" #'name)]
                    [superclass-name (format-id #'superclass "~a%" #'superclass)])

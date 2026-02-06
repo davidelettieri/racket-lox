@@ -41,7 +41,7 @@
                             message)])
               (parse-error tok msg))))
     (define (parse-error token message)
-        (raise (exn:fail:lox 
+        (raise (exn:fail:lox
             (format "[line ~a] Error at '~a': ~a"
                 (srcloc-line (token-srcloc token))
                 (token-lexeme token)
@@ -51,7 +51,7 @@
     (define (check type)
         (and (not (is-at-end?)) (eqv? (token-type (peek)) type)))
     (define (check-next type)
-        (and 
+        (and
             (not (is-at-end?))
             (not (eqv? (token-type (vector-ref _tokens (+ _current 1))) 'EOF))
             (eqv? (token-type (vector-ref _tokens (+ _current 1))) type)))
@@ -61,13 +61,13 @@
         (eqv? (token-type (peek)) 'EOF))
     (define (match . token-types)
         (define matched (findf check token-types))
-        (if matched 
+        (if matched
             (begin
                 (advance)
                 #t)
             #f))
     (define (declaration)
-        (cond 
+        (cond
             [(match 'CLASS) (class-declaration)]
             [(and (check 'FUN) (check-next 'IDENTIFIER))
              (begin
@@ -96,9 +96,9 @@
         (define name (consume 'IDENTIFIER (format "Expect ~a name." kind)))
         (consume 'LEFT_PAREN (format "Expect '(' after ~a name." kind))
         (define count 0)
-        (define parameters 
-            (if (check 'RIGHT_PAREN) 
-                empty 
+        (define parameters
+            (if (check 'RIGHT_PAREN)
+                empty
                 (for/list (
                     [param (in-producer (lambda () (consume 'IDENTIFIER "Expect parameter name")))]
                     #:final (check 'RIGHT_PAREN))
@@ -124,7 +124,7 @@
         (define statements (block))
         (datum->syntax #f `(lox-block ,@statements) (token->src brace)))
     (define (block)
-        (define statements 
+        (define statements
             (if (or (check 'RIGHT_BRACE) (is-at-end?))
                 '()
                 (for/list (
@@ -137,8 +137,8 @@
     (define (for-statement)
         (define for-keyword (previous))
         (consume 'LEFT_PAREN "Expect '(' after 'for'.")
-        (define initializer 
-            (cond 
+        (define initializer
+            (cond
                 [(match 'SEMICOLON) #f]
                 [(match 'VAR) (var-declaration)]
                 [else (expression-statement)]))
@@ -180,9 +180,9 @@
         value)
     (define (finish-call callee)
         (define paren (previous))
-        (define arguments 
-            (if (check 'RIGHT_PAREN) 
-                empty 
+        (define arguments
+            (if (check 'RIGHT_PAREN)
+                empty
                 (for/list (
                     [arg (in-producer expression)]
                     #:final (check 'RIGHT_PAREN))
@@ -194,12 +194,12 @@
         (define expr (primary))
         (define c #t)
         (while c
-            (cond 
+            (cond
                 [(match 'LEFT_PAREN) (set! expr (finish-call expr))]
                 [(match 'DOT) (begin
                                 (define dot (previous))
                                 (define name (consume 'IDENTIFIER "Expect property name after '.'."))
-                                (set! expr 
+                                (set! expr
                                     (datum->syntax #f `(lox-get ,expr ,name) (token->src dot))))]
                 [else (set! c #f)]))
         expr)
@@ -210,7 +210,7 @@
             [(match 'NIL) (datum->syntax #f #'lox-nil (token->src (previous)))]
             [(match 'STRING) (datum->syntax #f `(lox-literal ,(token-lexeme (previous))) (token->src (previous)))]
             [(match 'NUMBER) (datum->syntax #f `(lox-literal ,(token-literal (previous))) (token->src (previous)))]
-            [(match 'SUPER) 
+            [(match 'SUPER)
                 (let ([keyword (previous)])
                     (consume 'DOT "Expect '.' after 'super'.")
                     (define method (consume 'IDENTIFIER "Expect superclass method name."))
@@ -259,7 +259,7 @@
     (define (unary)
         (if (not (match 'BANG 'MINUS))
             (call)
-            (let ([op (previous)]) 
+            (let ([op (previous)])
                 (define right (unary))
                 (datum->syntax #f `(lox-unary ,(token-type op) ,right) (token->src op)))))
     (define (expression)
@@ -283,8 +283,8 @@
                          #'null)])
         (declaration)))
     (define statements
-        (if (is-at-end?) 
-            null 
+        (if (is-at-end?)
+            null
             (for/list (
                 [decl (in-producer protected-declaration)]
                 #:final (is-at-end?)

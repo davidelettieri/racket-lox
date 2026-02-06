@@ -24,22 +24,22 @@
 (module+ test
   ;; Declarations
   (test-case "class declaration"
-    (parse-and-assert 
-     "class A {}" 
+    (parse-and-assert
+     "class A {}"
      '((lox-class A #f ()))))
-  
+
   (test-case "class declaration with superclass"
-    (parse-and-assert 
+    (parse-and-assert
      "class A < B {}"
      '((lox-class A B ()))))
-  
+
   (test-case "class declaration with methods"
-    (parse-and-assert 
-     "class A { m() {} }" 
+    (parse-and-assert
+     "class A { m() {} }"
      '((lox-class A #f ((lox-function m () ()))))))
 
   (test-case "fun declaration"
-    (parse-and-assert 
+    (parse-and-assert
      "fun f(a, b) {}"
      '((lox-function f (a b) ()))))
 
@@ -52,7 +52,7 @@
   (test-case "parse var declaration with while loop (fixed)"
      (parse-and-assert "var c = 0;while (c < 3) c = c + 1;"
      '((lox-var-declaration c (lox-literal 0.0))
-       (lox-while (lox-binary (lox-variable c) LESS (lox-literal 3.0)) 
+       (lox-while (lox-binary (lox-variable c) LESS (lox-literal 3.0))
                   (lox-assign c (lox-binary (lox-variable c) PLUS (lox-literal 1.0)))))))
 
   ;; Statements
@@ -63,28 +63,28 @@
     (parse-and-assert "a;" '((lox-variable a))))
 
   (test-case "for statement"
-    (parse-and-assert 
+    (parse-and-assert
      "for(;;){}"
-     '((lox-while (lox-literal #t) (lox-block))))) 
+     '((lox-while (lox-literal #t) (lox-block)))))
 
   (test-case "for statement full"
     (parse-and-assert
      "for(var i=0; i<10; i = i + 1) {}"
-     '((lox-block 
+     '((lox-block
          (lox-var-declaration i (lox-literal 0.0))
-         (lox-while 
+         (lox-while
            (lox-binary (lox-variable i) LESS (lox-literal 10.0))
-           (lox-block 
+           (lox-block
              (lox-block)
              (lox-assign i (lox-binary (lox-variable i) PLUS (lox-literal 1.0)))))))))
 
   (test-case "if statement"
-    (parse-and-assert 
+    (parse-and-assert
       "if (condition) print 1;"
       '((lox-if (lox-variable condition) (lox-print (lox-literal 1.0))))))
-  
+
   (test-case "if else statement"
-    (parse-and-assert 
+    (parse-and-assert
       "if (condition) print 1; else print 2;"
       '((lox-if (lox-variable condition) (lox-print (lox-literal 1.0)) (lox-print (lox-literal 2.0))))))
 
@@ -98,13 +98,13 @@
     (parse-and-assert "return 1;" '((lox-return (lox-literal 1.0)))))
 
   (test-case "while statement"
-    (parse-and-assert 
+    (parse-and-assert
       "while (true) {}"
       '((lox-while (lox-literal #t) (lox-block)))))
 
   (test-case "block statement"
-    (parse-and-assert 
-      "{ var a = 1; print a; }" 
+    (parse-and-assert
+      "{ var a = 1; print a; }"
       '((lox-block (lox-var-declaration a (lox-literal 1.0)) (lox-print (lox-variable a))))))
 
   ;; Expressions
@@ -136,15 +136,15 @@
      (parse-and-assert "f(1, 2);" '((lox-call (lox-variable f) (lox-literal 1.0) (lox-literal 2.0)))))
 
   (test-case "get"
-     (parse-and-assert 
-      "a.b;" 
+     (parse-and-assert
+      "a.b;"
       '((lox-get (lox-variable a) (token IDENTIFIER "b" #f)))))
 
   (test-case "set"
      (parse-and-assert
       "a.b = c;"
      '((lox-set (lox-variable a) (token IDENTIFIER "b" #f) (lox-variable c)))))
-    
+
   (test-case "super method"
     (parse-and-assert
        "super.method();"

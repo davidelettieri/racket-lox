@@ -17,7 +17,7 @@
        ;; Whitespace
        [(char-whitespace? c)
         (values (string c) 'white-space #f start (add1 start) 0 mode)]
-       
+
        ;; Comments (// ...)
        [(and (eqv? c #\/) (eqv? (peek-char in) #\/))
         (read-char in) ; consume second /
@@ -31,7 +31,7 @@
                   (loop))))
          (define str (list->string (reverse chars)))
          (values (string-append "//" str) 'comment #f start (+ start 2 (length chars)) 0 mode)]
-       
+
        ;; String
        [(eqv? c #\")
         (define chars (list))

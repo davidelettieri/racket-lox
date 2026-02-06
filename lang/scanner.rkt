@@ -30,7 +30,7 @@
 (define (scan-tokens input-port)
   (port-count-lines! input-port)
   (for/list (
-    [token (in-producer 
+    [token (in-producer
       (lambda () (scan-token input-port)))]
       #:final (eqv? 'EOF (token-type token)))
       token))

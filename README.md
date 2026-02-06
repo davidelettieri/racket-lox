@@ -1,7 +1,7 @@
 racket-lox
 ==========
 
-Here my **failed** attempt at implementing Lox language from crafting interpreters book as a racket language module. 
+Here my **failed** attempt at implementing Lox language from crafting interpreters book as a racket language module.
 
 # racket numbers note
 

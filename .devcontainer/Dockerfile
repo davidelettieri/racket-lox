@@ -6,8 +6,8 @@ RUN apt-get update -y && apt-get install -y \
     git \
     build-essential \
     ca-certificates \
-    curl --no-install-recommends && \  
-    rm -rf /var/lib/apt/lists/*  
+    curl --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
 
 ARG DART_VERSION=2.19.6
 ARG DART_DEB=dart_${DART_VERSION}-1_amd64.deb
