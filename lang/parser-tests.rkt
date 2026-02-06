@@ -16,10 +16,10 @@
     [(list? datum) (map strip-tokens datum)]
     [else datum]))
 
-(define (parse-and-assert str expected)
+(define-syntax-rule (parse-and-assert str expected)
   (check-equal?
-          (strip-tokens (map syntax->datum (parse-from-string str)))
-          expected))
+   (strip-tokens (map syntax->datum (parse-from-string str)))
+   expected))
 
 (module+ test
   ;; Declarations
