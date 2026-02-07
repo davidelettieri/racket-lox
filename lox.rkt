@@ -34,10 +34,9 @@
 (define (lox-negate-impl a line)
   (if (number? a) (- a) (lox-runtime-error "Operand must be a number." line)))
 
-
 (define-syntax (lox-binary stx)
   (syntax-parse stx
-    #:datum-literals (PLUS MINUS GREATER GREATER_EQUAL LESS LESS_EQUAL SLASH STAR BANG_EQUAL EQUAL_EQUAL)
+    #:datum-literals (PLUS MINUS GREATER GREATER_EQUAL LESS LESS_EQUAL SLASH STAR BANG_EQUAL EQUAL_EQUAL AND OR)
     [(_ left:expr PLUS right:expr)
       (syntax/loc stx (lox-add left right))]
     [(_ left:expr MINUS right:expr)
@@ -57,7 +56,27 @@
     [(_ left:expr BANG_EQUAL right:expr)
       (syntax/loc stx (not (lox-eqv? left right)))]
     [(_ left:expr EQUAL_EQUAL right:expr)
-      (syntax/loc stx (lox-eqv? left right))]))
+      (syntax/loc stx (lox-eqv? left right))]
+    [(_ left:expr AND right:expr)
+      (syntax/loc stx (lox-and left right))]
+    [(_ left:expr OR right:expr)
+      (syntax/loc stx (lox-or left right))]))
+
+(define-syntax (lox-or stx)
+  (syntax-parse stx
+    #:datum-literals (lox-nil)
+    [(_ lox-nil v:expr) #'v]
+    [(_ #f v:expr) #'v]
+    [(_ v:expr lox-nil) #'v]
+    [(_ v:expr #f) #'v]
+    [(_ u:expr v:expr) #'(or u v)]))
+
+(define-syntax (lox-and stx)
+  (syntax-parse stx
+    #:datum-literals (lox-nil)
+    [(_ lox-nil v:expr) #'lox-nil]
+    [(_ v:expr lox-nil) #'lox-nil]
+    [(_ u:expr v:expr) #'(and u v)]))
 
 (define (lox-eqv? a b)
   (cond
@@ -150,6 +169,8 @@
 
 (define-syntax (lox-if stx)
   (syntax-parse stx
+    #:datum-literals (lox-nil)
+    [(_ lox-nil then else) #'else]
     [(_ cond then) #'(when cond then)]
     [(_ cond then else) #'(if cond then else)]))
 
