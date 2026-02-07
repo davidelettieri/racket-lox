@@ -169,10 +169,14 @@
 
 (define-syntax (lox-if stx)
   (syntax-parse stx
-    #:datum-literals (lox-nil)
-    [(_ lox-nil then else) #'else]
-    [(_ cond then) #'(when cond then)]
-    [(_ cond then else) #'(if cond then else)]))
+    [(_ cond then)
+     #'(let ([cond-val cond])
+        (unless (or (eq? cond-val #f) (eq? cond-val lox-nil)) then))]
+    [(_ cond then else)
+     #'(let ([cond-val cond])
+         (if (or (eq? cond-val #f) (eq? cond-val lox-nil))
+             else
+             then))]))
 
 (define-syntax (lox-call stx)
   (syntax-parse stx
