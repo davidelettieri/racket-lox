@@ -20,16 +20,32 @@ jobs:
         with:
           version: "9.0"
 
+      - name: Cache Racket packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.racket
+          key: racket-${{ runner.os }}-9.0
+          restore-keys: |
+            racket-${{ runner.os }}-9.0-
+            racket-${{ runner.os }}-
+
       - name: Install package
         run: raco pkg install --auto --link "$GITHUB_WORKSPACE"
 
       - name: Run unit tests
         run: raco test -x -p racket-lox
 
+      - name: Cache Dart SDK download
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/dart
+          key: dart-${{ runner.os }}-2.19.6
+
       - name: Install Dart
         run: |
-          wget -O /tmp/dart_2.19.6-1_amd64.deb "https://storage.googleapis.com/dart-archive/channels/stable/release/2.19.6/linux_packages/dart_2.19.6-1_amd64.deb"
-          sudo dpkg -i /tmp/dart_2.19.6-1_amd64.deb
+          mkdir -p ~/.cache/dart
+          wget -O ~/.cache/dart/dart_2.19.6-1_amd64.deb "https://storage.googleapis.com/dart-archive/channels/stable/release/2.19.6/linux_packages/dart_2.19.6-1_amd64.deb"
+          sudo dpkg -i ~/.cache/dart/dart_2.19.6-1_amd64.deb
           echo "/usr/lib/dart/bin" >> $GITHUB_PATH
 
       - name: Setup test harness
