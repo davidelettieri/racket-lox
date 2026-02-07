@@ -64,19 +64,19 @@
 
 (define-syntax (lox-or stx)
   (syntax-parse stx
-    #:datum-literals (lox-nil)
-    [(_ lox-nil v:expr) #'v]
-    [(_ #f v:expr) #'v]
-    [(_ v:expr lox-nil) #'v]
-    [(_ v:expr #f) #'v]
-    [(_ u:expr v:expr) #'(or u v)]))
+    [(_ left right)
+     #'(let ([l-val left])
+         (if (or (eq? l-val #f) (eq? l-val lox-nil))
+             right
+             l-val))]))
 
 (define-syntax (lox-and stx)
   (syntax-parse stx
-    #:datum-literals (lox-nil)
-    [(_ lox-nil v:expr) #'lox-nil]
-    [(_ v:expr lox-nil) #'lox-nil]
-    [(_ u:expr v:expr) #'(and u v)]))
+    [(_ left right)
+     #'(let ([l-val left])
+         (if (or (eq? l-val #f) (eq? l-val lox-nil))
+             l-val
+             right))]))
 
 (define (lox-eqv? a b)
   (cond
