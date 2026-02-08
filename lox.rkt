@@ -67,7 +67,7 @@
 
 (define-syntax (lox-or stx)
   (syntax-parse stx
-    [(_ left right)
+    [(_ left:expr right:expr)
      #'(let ([l-val left])
          (if (lox-truthy? l-val)
              l-val
@@ -75,7 +75,7 @@
 
 (define-syntax (lox-and stx)
   (syntax-parse stx
-    [(_ left right)
+    [(_ left:expr right:expr)
      #'(let ([l-val left])
          (if (lox-truthy? l-val)
              right
@@ -173,13 +173,11 @@
 (define-syntax (lox-if stx)
   (syntax-parse stx
     [(_ cond then)
-     #'(let ([cond-val cond])
-        (when (lox-truthy? cond-val) then))]
+     #'(when (lox-truthy? cond) then)]
     [(_ cond then else)
-     #'(let ([cond-val cond])
-         (if (lox-truthy? cond-val)
+     #'(if (lox-truthy? cond)
              then
-             else))]))
+             else)]))
 
 (define-syntax (lox-call stx)
   (syntax-parse stx
