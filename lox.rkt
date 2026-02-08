@@ -62,21 +62,24 @@
     [(_ left:expr OR right:expr)
       (syntax/loc stx (lox-or left right))]))
 
+(define (lox-truthy? v)
+  (not (or (eq? v #f) (eq? v lox-nil))))
+
 (define-syntax (lox-or stx)
   (syntax-parse stx
     [(_ left right)
      #'(let ([l-val left])
-         (if (or (eq? l-val #f) (eq? l-val lox-nil))
-             right
-             l-val))]))
+         (if (lox-truthy? l-val)
+             l-val
+             right))]))
 
 (define-syntax (lox-and stx)
   (syntax-parse stx
     [(_ left right)
      #'(let ([l-val left])
-         (if (or (eq? l-val #f) (eq? l-val lox-nil))
-             l-val
-             right))]))
+         (if (lox-truthy? l-val)
+             right
+             l-val))]))
 
 (define (lox-eqv? a b)
   (cond
@@ -109,7 +112,7 @@
   (syntax-parse stx
     [(_ cond:expr body:expr ...)
       #'(let loop ()
-        (when cond
+        (when (lox-truthy? cond)
           body ...
           (loop)))]))
 
@@ -171,12 +174,12 @@
   (syntax-parse stx
     [(_ cond then)
      #'(let ([cond-val cond])
-        (unless (or (eq? cond-val #f) (eq? cond-val lox-nil)) then))]
+        (when (lox-truthy? cond-val) then))]
     [(_ cond then else)
      #'(let ([cond-val cond])
-         (if (or (eq? cond-val #f) (eq? cond-val lox-nil))
-             else
-             then))]))
+         (if (lox-truthy? cond-val)
+             then
+             else))]))
 
 (define-syntax (lox-call stx)
   (syntax-parse stx
@@ -278,22 +281,3 @@
          lox-grouping
          lox-top
          (for-syntax resolve-redefinitions))
-
-; (define lox-nil 'nil)
-
-
-
-
-
-; (define-syntax lox-if
-;   (syntax-rules ()
-;     [(lox-if a b c) (if a b c)]
-;     [(lox-if a b) (when a b)]))
-
-
-
-
-
-
-; (define-syntax-rule (lox-string s) s)
-; (define-syntax-rule (lox-number n) n)
