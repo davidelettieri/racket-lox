@@ -34,10 +34,9 @@
 (define (lox-negate-impl a line)
   (if (number? a) (- a) (lox-runtime-error "Operand must be a number." line)))
 
-
 (define-syntax (lox-binary stx)
   (syntax-parse stx
-    #:datum-literals (PLUS MINUS GREATER GREATER_EQUAL LESS LESS_EQUAL SLASH STAR BANG_EQUAL EQUAL_EQUAL)
+    #:datum-literals (PLUS MINUS GREATER GREATER_EQUAL LESS LESS_EQUAL SLASH STAR BANG_EQUAL EQUAL_EQUAL AND OR)
     [(_ left:expr PLUS right:expr)
       (syntax/loc stx (lox-add left right))]
     [(_ left:expr MINUS right:expr)
@@ -57,7 +56,30 @@
     [(_ left:expr BANG_EQUAL right:expr)
       (syntax/loc stx (not (lox-eqv? left right)))]
     [(_ left:expr EQUAL_EQUAL right:expr)
-      (syntax/loc stx (lox-eqv? left right))]))
+      (syntax/loc stx (lox-eqv? left right))]
+    [(_ left:expr AND right:expr)
+      (syntax/loc stx (lox-and left right))]
+    [(_ left:expr OR right:expr)
+      (syntax/loc stx (lox-or left right))]))
+
+(define (lox-truthy? v)
+  (not (or (eq? v #f) (eq? v lox-nil))))
+
+(define-syntax (lox-or stx)
+  (syntax-parse stx
+    [(_ left:expr right:expr)
+     #'(let ([l-val left])
+         (if (lox-truthy? l-val)
+             l-val
+             right))]))
+
+(define-syntax (lox-and stx)
+  (syntax-parse stx
+    [(_ left:expr right:expr)
+     #'(let ([l-val left])
+         (if (lox-truthy? l-val)
+             right
+             l-val))]))
 
 (define (lox-eqv? a b)
   (cond
@@ -90,7 +112,7 @@
   (syntax-parse stx
     [(_ cond:expr body:expr ...)
       #'(let loop ()
-        (when cond
+        (when (lox-truthy? cond)
           body ...
           (loop)))]))
 
@@ -150,8 +172,12 @@
 
 (define-syntax (lox-if stx)
   (syntax-parse stx
-    [(_ cond then) #'(when cond then)]
-    [(_ cond then else) #'(if cond then else)]))
+    [(_ cond then)
+     #'(when (lox-truthy? cond) then)]
+    [(_ cond then else)
+     #'(if (lox-truthy? cond)
+             then
+             else)]))
 
 (define-syntax (lox-call stx)
   (syntax-parse stx
@@ -253,22 +279,3 @@
          lox-grouping
          lox-top
          (for-syntax resolve-redefinitions))
-
-; (define lox-nil 'nil)
-
-
-
-
-
-; (define-syntax lox-if
-;   (syntax-rules ()
-;     [(lox-if a b c) (if a b c)]
-;     [(lox-if a b) (when a b)]))
-
-
-
-
-
-
-; (define-syntax-rule (lox-string s) s)
-; (define-syntax-rule (lox-number n) n)
