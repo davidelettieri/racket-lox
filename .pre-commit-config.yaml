@@ -8,6 +8,13 @@ repos:
       - id: check-added-large-files
   - repo: local
     hooks:
+      - id: raco-fmt
+        name: Racket Format (raco fmt)
+        entry: raco fmt -i
+        language: system
+        types: [file]
+        files: \.rkt$
+        pass_filenames: true
       - id: raco-test
         name: Racket Test (raco test)
         entry: raco test
