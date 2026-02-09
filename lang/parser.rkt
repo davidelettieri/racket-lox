@@ -105,7 +105,7 @@
             (set! count (+ count 1))
             (match 'COMMA)
             (when (> count 255)
-              (parse-error (peek) "Can't have more than 255 parameters."))
+              (parse-error (previous) "Can't have more than 255 parameters."))
             param)))
     (consume 'RIGHT_PAREN "Expect ')' after parameters.")
     (consume 'LEFT_BRACE (format "Expect '{' before ~a body" kind))
@@ -175,7 +175,7 @@
     (define keyword (previous))
     (define value
       (if (check 'SEMICOLON)
-          (datum->syntax #f `(lox-nil))
+          (datum->syntax #f 'lox-nil)
           (expression)))
     (consume 'SEMICOLON "Expect ';' after return value.")
     (datum->syntax #f `(lox-return ,value) (token->src keyword)))
