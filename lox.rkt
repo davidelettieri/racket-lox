@@ -195,10 +195,15 @@
 (define-syntax (lox-call stx)
   (syntax-parse stx
     [(_ callee arg0 ...)
-     (with-syntax ([line (syntax-line stx)])
+     (with-syntax ([line (syntax-line stx)]
+                   [param-count (length (syntax->list #'(arg0 ...)))])
        #'(let ([f callee])
            (if (procedure? f)
-               (f arg0 ...)
+               (let ([arity (procedure-arity f)])
+                 (if (eq? param-count arity)
+                     (f arg0 ...)
+                     (lox-runtime-error (format "Expected ~a arguments but got ~a." arity param-count)
+                                        line)))
                (lox-runtime-error "Can only call functions and classes." line))))]))
 
 (define-syntax (lox-class stx)

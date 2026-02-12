@@ -101,7 +101,7 @@
       (if (check 'RIGHT_PAREN)
           empty
           (for/list ([param (in-producer (lambda () (consume 'IDENTIFIER "Expect parameter name")))]
-                     #:final (check 'RIGHT_PAREN))
+                     #:final (or (check 'RIGHT_PAREN) (not (check 'COMMA))))
             (set! count (+ count 1))
             (match 'COMMA)
             (when (> count 255)
