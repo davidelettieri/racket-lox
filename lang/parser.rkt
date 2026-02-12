@@ -108,7 +108,7 @@
               (parse-error (previous) "Can't have more than 255 parameters."))
             param)))
     (consume 'RIGHT_PAREN "Expect ')' after parameters.")
-    (consume 'LEFT_BRACE (format "Expect '{' before ~a body" kind))
+    (consume 'LEFT_BRACE (format "Expect '{' before ~a body." kind))
     (define body (block))
     (define name-id (token->symbol name))
     (datum->syntax #f
