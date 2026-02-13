@@ -180,6 +180,11 @@
   (cond
     [(boolean? value) (print-bool value)]
     [(eqv? value 'nil) (displayln "nil")]
+    [(procedure? value)
+     (let ([function-name (object-name value)])
+       (if (eqv? function-name 'clock)
+           (displayln "<native fn>")
+           (displayln (format "<fn ~a>" function-name))))]
     [else (displayln value)]))
 
 (define (print-bool value)
