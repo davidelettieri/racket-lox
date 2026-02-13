@@ -154,12 +154,6 @@
 (lox-binary-number-op lox-greater >)
 (lox-binary-number-op lox-greater-equal >=)
 
-(define-syntax (lox-function-call stx)
-  (syntax-parse stx
-    [(_ name:expr arg1:expr ...)
-     (with-syntax ([function (format-id #'name "~a" #'name)])
-       #'(function arg1 ...))]))
-
 (define-syntax (lox-var-declaration stx)
   (syntax-parse stx
     [(_ name:id val:expr) (syntax (define name val))]))

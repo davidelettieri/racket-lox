@@ -5,7 +5,11 @@
 
 (provide scan-tokens
          (struct-out token)
+         (struct-out scanner-output)
          keywords)
+
+(struct exn:fail:scanner exn:fail (line) #:transparent)
+(struct scanner-output (tokens had-error) #:transparent)
 
 (define keywords
   (hash "and"
@@ -42,10 +46,23 @@
         'WHILE))
 
 (define (scan-tokens input-port)
+  (define _hadError #f)
   (port-count-lines! input-port)
-  (for/list ([token (in-producer (lambda () (scan-token input-port)))]
-             #:final (eqv? 'EOF (token-type token)))
-    token))
+  (define (safe-scan-token)
+    (let loop ()
+      (with-handlers ([exn:fail:scanner? (lambda (e)
+                                           (set! _hadError #t)
+                                           (displayln (format "[line ~a] Error: ~a"
+                                                              (exn:fail:scanner-line e)
+                                                              (exn-message e))
+                                                      (current-error-port))
+                                           (loop))])
+        (scan-token input-port))))
+  (define tokens
+    (for/list ([token (in-producer safe-scan-token)]
+               #:final (eqv? 'EOF (token-type token)))
+      token))
+  (scanner-output tokens _hadError))
 
 ;; helper to build srcloc with a real source
 (define (make-src ip line col pos span)
@@ -95,7 +112,9 @@
            (cond
              [(char-numeric? c) (number c input-port line col pos)]
              [(is-alphanumeric? c) (identifier c input-port line col pos)]
-             [else (error 'scan-token (format "Unexpected character: ~a at ~a:~a" c line col))])]))))
+             [else
+              (raise
+               (exn:fail:scanner "Unexpected character." (current-continuation-marks) line))])]))))
 
 ;; update helpers to use make-src
 (define (identifier c input-port line col pos)
@@ -130,8 +149,7 @@
   (define chars '())
   (while-not-char-not-end input-port #\" (set! chars (cons (read-char input-port) chars)))
   (when (is-at-end? input-port)
-    (displayln (format "[line ~a] Error: Unterminated string." line) (current-error-port))
-    (exit 65))
+    (raise (exn:fail:scanner "Unterminated string." (current-continuation-marks) line)))
   (read-char input-port)
   (define value (list->string (reverse chars)))
   (token 'STRING value #f (make-src input-port line col pos (+ 2 (string-length value)))))

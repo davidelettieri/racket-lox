@@ -13,7 +13,7 @@
 (define (token->symbol t)
   (datum->syntax #f (string->symbol (token-lexeme t)) (token->src t)))
 
-(define (parse tokens)
+(define (parse scanner-result)
   (define (synchronize)
     (advance)
     (let loop ()
@@ -25,8 +25,8 @@
               [else
                (advance)
                (loop)])))))
-  (define _hadError #f)
-  (define _tokens (list->vector tokens))
+  (define _tokens (list->vector (scanner-output-tokens scanner-result)))
+  (define _hadError (scanner-output-had-error scanner-result))
   (define _current 0)
   (define (advance)
     (when (not (is-at-end?))
@@ -192,12 +192,16 @@
     value)
   (define (finish-call callee)
     (define paren (previous))
+    (define count 0)
     (define arguments
       (if (check 'RIGHT_PAREN)
           empty
           (for/list ([arg (in-producer expression)]
-                     #:final (check 'RIGHT_PAREN))
+                     #:final (or (check 'RIGHT_PAREN) (not (check 'COMMA))))
+            (set! count (+ count 1))
             (match 'COMMA)
+            (when (> count 255)
+              (parse-error (previous) "Can't have more than 255 arguments."))
             arg)))
     (consume 'RIGHT_PAREN "Expect ')' after arguments.")
     (datum->syntax #f `(lox-call ,callee ,@arguments) (token->src paren)))
@@ -309,7 +313,7 @@
                    #:final (is-at-end?)
                    #:when (lambda (el) (not (null? el))))
           decl)))
-  (when _hadError
+  (when (or _hadError)
     (exit 65))
   statements)
 (provide parse)
