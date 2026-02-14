@@ -1,7 +1,6 @@
 #lang racket
 
 (require racket/syntax
-         syntax/parse
          racket/stxparam)
 (require (for-syntax racket/base
                      racket/syntax
@@ -29,7 +28,7 @@
 (define-syntax (lox-unary stx)
   (syntax-parse stx
     #:datum-literals (BANG MINUS)
-    [(_ BANG v:expr) #'(not v)]
+    [(_ BANG v:expr) #'(not (lox-truthy? v))]
     [(_ MINUS v:expr)
      (syntax/loc stx
        (lox-negate v))]))
@@ -155,12 +154,6 @@
 (lox-binary-number-op lox-greater >)
 (lox-binary-number-op lox-greater-equal >=)
 
-(define-syntax (lox-function-call stx)
-  (syntax-parse stx
-    [(_ name:expr arg1:expr ...)
-     (with-syntax ([function (format-id #'name "~a" #'name)])
-       #'(function arg1 ...))]))
-
 (define-syntax (lox-var-declaration stx)
   (syntax-parse stx
     [(_ name:id val:expr) (syntax (define name val))]))
@@ -181,6 +174,11 @@
   (cond
     [(boolean? value) (print-bool value)]
     [(eqv? value 'nil) (displayln "nil")]
+    [(procedure? value)
+     (let ([function-name (object-name value)])
+       (if (eqv? function-name 'clock)
+           (displayln "<native fn>")
+           (displayln (format "<fn ~a>" function-name))))]
     [else (displayln value)]))
 
 (define (print-bool value)
@@ -195,8 +193,17 @@
 
 (define-syntax (lox-call stx)
   (syntax-parse stx
-    [(_ callee #f) #'(callee)]
-    [(_ callee arg0 ...) #'(callee arg0 ...)]))
+    [(_ callee arg0 ...)
+     (with-syntax ([line (syntax-line stx)]
+                   [param-count (length (syntax->list #'(arg0 ...)))])
+       #'(let ([f callee])
+           (if (procedure? f)
+               (let ([arity (procedure-arity f)])
+                 (if (eq? param-count arity)
+                     (f arg0 ...)
+                     (lox-runtime-error (format "Expected ~a arguments but got ~a." arity param-count)
+                                        line)))
+               (lox-runtime-error "Can only call functions and classes." line))))]))
 
 (define-syntax (lox-class stx)
   (syntax-parse stx
