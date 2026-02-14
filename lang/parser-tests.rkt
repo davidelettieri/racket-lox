@@ -139,7 +139,7 @@
   (test-case "grouping"
     (parse-and-assert "(1);" '((lox-grouping (lox-literal 1.0)))))
 
-  (test-case "error limit arguments"
+  (test-case "error limit arguments with 256 args"
     (define args
       (string-join (for/list ([i (in-range 256)])
                      (number->string i))
@@ -154,9 +154,39 @@
     (check-regexp-match #rx"Error at '255': Can't have more than 255 arguments"
                         (get-output-string error-out)))
 
-  (test-case "error limit parameters"
+  (test-case "error limit arguments with 257 args"
+    (define args
+      (string-join (for/list ([i (in-range 257)])
+                     (number->string i))
+                   ", "))
+    (define source (format "f(~a);" args))
+    (define error-out (open-output-string))
+
+    (parameterize ([current-error-port error-out]
+                   [exit-handler (lambda (code) (void))])
+      (parse-from-string source))
+
+    (check-regexp-match #rx"Error at '255': Can't have more than 255 arguments"
+                        (get-output-string error-out)))
+
+  (test-case "error limit parameters with 256 params"
     (define params
       (string-join (for/list ([i (in-range 256)])
+                     (format "a~a" i))
+                   ", "))
+    (define source (format "fun f(~a) {}" params))
+    (define error-out (open-output-string))
+
+    (parameterize ([current-error-port error-out]
+                   [exit-handler (lambda (code) (void))])
+      (parse-from-string source))
+
+    (check-regexp-match #rx"Error at 'a255': Can't have more than 255 parameters"
+                        (get-output-string error-out)))
+
+  (test-case "error limit parameters with 257 params"
+    (define params
+      (string-join (for/list ([i (in-range 257)])
                      (format "a~a" i))
                    ", "))
     (define source (format "fun f(~a) {}" params))

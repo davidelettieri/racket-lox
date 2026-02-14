@@ -103,9 +103,9 @@
           (for/list ([param (in-producer (lambda () (consume 'IDENTIFIER "Expect parameter name")))]
                      #:final (or (check 'RIGHT_PAREN) (not (check 'COMMA))))
             (set! count (+ count 1))
-            (match 'COMMA)
             (when (> count 255)
               (parse-error (previous) "Can't have more than 255 parameters."))
+            (match 'COMMA)
             param)))
     (consume 'RIGHT_PAREN "Expect ')' after parameters.")
     (consume 'LEFT_BRACE (format "Expect '{' before ~a body." kind))
@@ -199,9 +199,9 @@
           (for/list ([arg (in-producer expression)]
                      #:final (or (check 'RIGHT_PAREN) (not (check 'COMMA))))
             (set! count (+ count 1))
-            (match 'COMMA)
             (when (> count 255)
               (parse-error (previous) "Can't have more than 255 arguments."))
+            (match 'COMMA)
             arg)))
     (consume 'RIGHT_PAREN "Expect ')' after arguments.")
     (datum->syntax #f `(lox-call ,callee ,@arguments) (token->src paren)))
