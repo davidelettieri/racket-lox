@@ -17,8 +17,8 @@ repos:
         pass_filenames: true
       - id: raco-test
         name: Racket Test (raco test)
-        entry: raco test
+        entry: raco test -x -p racket-lox
         language: system
         types: [file]
         files: \.rkt$
-        pass_filenames: true
+        pass_filenames: false

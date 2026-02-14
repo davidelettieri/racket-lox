@@ -4,7 +4,9 @@
          "scanner.rkt")
 
 (define (types-from-string s)
-  (map token-type (scan-tokens (open-input-string s))))
+  (define scan-result (scan-tokens (open-input-string s)))
+  (define tokens (scanner-output-tokens scan-result))
+  (map token-type tokens))
 
 (module+ test
   (define expected-types
@@ -17,7 +19,7 @@
     (check-equal? (types-from-string " ( \n ) { }\t, .  - + ;  *   ") expected-types))
 
   (test-case "lexemes for single-character tokens"
-    (define toks (scan-tokens (open-input-string "(){},.-+;*")))
+    (define toks (scanner-output-tokens (scan-tokens (open-input-string "(){},.-+;*"))))
     ;; take first 10 to skip EOF
     (define first10 (take toks 10))
     (check-equal? (map token-lexeme first10) (list #\( #\) #\{ #\} #\, #\. #\- #\+ #\; #\*)))
@@ -27,7 +29,7 @@
                   '(BANG_EQUAL EQUAL_EQUAL LESS_EQUAL GREATER_EQUAL EOF)))
 
   (test-case "lexemes for multi-character operators"
-    (define toks (scan-tokens (open-input-string "!= == <= >=")))
+    (define toks (scanner-output-tokens (scan-tokens (open-input-string "!= == <= >="))))
     (define first4 (take toks 4))
     (check-equal? (map token-lexeme first4) (list "!=" "==" "<=" ">=")))
 
@@ -49,7 +51,7 @@
     (check-equal? (types-from-string "! = < >") '(BANG EQUAL LESS GREATER EOF)))
 
   (test-case "lexemes for single-character comparison and assignment tokens"
-    (define toks (scan-tokens (open-input-string "! = < >")))
+    (define toks (scanner-output-tokens (scan-tokens (open-input-string "! = < >"))))
     (define first4 (take toks 4))
     (check-equal? (map token-lexeme first4) (list #\! #\= #\< #\>)))
 
@@ -63,7 +65,7 @@
     (check-equal? (types-from-string "/") '(SLASH EOF)))
 
   (test-case "lexeme for slash token"
-    (define toks (scan-tokens (open-input-string "/")))
+    (define toks (scanner-output-tokens (scan-tokens (open-input-string "/"))))
     (define first1 (take toks 1))
     (check-equal? (map token-lexeme first1) (list #\/)))
 
@@ -80,7 +82,7 @@
     (check-equal? (types-from-string "\"lox\"") '(STRING EOF)))
 
   (test-case "lexeme for string literal token"
-    (define toks (scan-tokens (open-input-string "\"lox interpreter\"")))
+    (define toks (scanner-output-tokens (scan-tokens (open-input-string "\"lox interpreter\""))))
     (define first1 (take toks 1))
     (check-equal? (map token-lexeme first1) (list "lox interpreter")))
 
@@ -88,13 +90,13 @@
     (check-equal? (types-from-string "123") '(NUMBER EOF)))
 
   (test-case "lexeme and literal for integer number literal"
-    (define token (first (scan-tokens (open-input-string "123"))))
+    (define token (first (scanner-output-tokens (scan-tokens (open-input-string "123")))))
     (check-equal? (token-lexeme token) "123")
     (check-true (flonum? (token-literal token)))
     (check-equal? (token-literal token) 123.0))
 
   (test-case "lexeme and literal for floating-point number literal"
-    (define token (first (scan-tokens (open-input-string "123.45"))))
+    (define token (first (scanner-output-tokens (scan-tokens (open-input-string "123.45")))))
     (check-equal? (token-lexeme token) "123.45")
     (check-true (flonum? (token-literal token)))
     (check-equal? (token-literal token) 123.45))
@@ -107,8 +109,10 @@
 
   (test-case "lexemes for keyword tokens"
     (define toks
-      (scan-tokens (open-input-string
-                    "and class else false for fun if nil or print return super this true var while")))
+      (scanner-output-tokens
+       (scan-tokens
+        (open-input-string
+         "and class else false for fun if nil or print return super this true var while"))))
     (define first16 (take toks 16))
     (check-equal? (map token-lexeme first16)
                   '("and" "class"
@@ -128,7 +132,7 @@
                           "while")))
 
   (test-case "non-keyword identifiers produce IDENTIFIER tokens"
-    (define toks (scan-tokens (open-input-string "lox foo123 bar_baz")))
+    (define toks (scanner-output-tokens (scan-tokens (open-input-string "lox foo123 bar_baz"))))
     (define first3 (take toks 3))
     (check-equal? (map token-type first3) '(IDENTIFIER IDENTIFIER IDENTIFIER))
     (check-equal? (map token-lexeme first3) '("lox" "foo123" "bar_baz"))))

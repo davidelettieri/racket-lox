@@ -313,7 +313,7 @@
                    #:final (is-at-end?)
                    #:when (lambda (el) (not (null? el))))
           decl)))
-  (when (or _hadError)
+  (when _hadError
     (exit 65))
   statements)
 (provide parse)
