@@ -202,8 +202,6 @@
        (when (not (eq? current-class 'subclass))
          (resolve-error #'keyword "Can't use 'super' in a class with no superclass."))
        (resolve-local #'keyword)]
-      [(lox-literal v)
-       (void)] ; Re-add catch-all or literals handled above? Literal v is handled above.
       ;; We need a catch-all if expr can be something else.
       ;; But looking at the list of datum-literals, it seems exhaustive for Lox AST if correct.
       ;; However, if we missed something, it's safer to have [_ (void)].

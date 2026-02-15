@@ -254,10 +254,17 @@
       [() #'lox-nil]
       [(stmt . rest)
        (syntax-parse #'stmt
-         #:datum-literals (lox-var-declaration)
+         #:datum-literals (lox-var-declaration lox-function)
          [(lox-var-declaration name val)
           (with-syntax ([body (expand-block-stmts #'rest)])
             #'(let ([name val]) body))]
+         [(lox-function name (arg ...) (fstmt ...))
+          (with-syntax ([body (expand-block-stmts #'rest)])
+            #'(letrec ([name (lambda (arg ...)
+                               (let/ec k
+                                 (syntax-parameterize ([return-param (make-rename-transformer #'k)])
+                                   (lox-block fstmt ...))))])
+                body))]
          [other
           (with-syntax ([body (expand-block-stmts #'rest)])
             #'(begin
