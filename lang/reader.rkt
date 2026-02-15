@@ -8,7 +8,7 @@
   (define tokens (scan-tokens in))
   (define ast (parse tokens))
   `(module anonymous-module racket-lox
-     ,@ast))
+     (lox-module-wrapper ,@ast)))
 
 (define (read-syntax src in)
   (define source (or src (object-name in)))
@@ -16,7 +16,7 @@
   (define ast (parse tokens))
   (define module-stx
     `(module anonymous-module racket-lox
-       ,@ast))
+       (lox-module-wrapper ,@ast)))
   module-stx)
 
 (define (get-info in mod line col pos)

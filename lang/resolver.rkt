@@ -2,7 +2,10 @@
 
 (require syntax/parse)
 
-(provide resolve-statements)
+(provide resolve-statements
+         (struct-out exn:fail:lox:resolver))
+
+(struct exn:fail:lox:resolver exn:fail (line) #:transparent)
 
 ;; The resolver primarily performs static analysis to enforce Lox semantic rules
 ;; that are not automatically handled by Racket's scoping (like redeclaration checks).
@@ -10,6 +13,27 @@
   (define scopes '()) ;; List of hash tables (symbol -> boolean/state)
   (define current-function 'none) ;; 'none | 'function | 'initializer | 'method
   (define current-class 'none) ;; 'none | 'class | 'subclass
+  (define had-error? #f)
+
+  (define (stx->error-element stx)
+    (define datum (syntax->datum stx))
+    (cond
+      [(symbol? datum)
+       (define symbol-name (symbol->string datum))
+       (if (and (>= (string-length symbol-name) 4) (string=? (substring symbol-name 0 4) "lox-"))
+           (substring symbol-name 4)
+           symbol-name)]
+      [(string? datum) datum]
+      [(number? datum) (number->string datum)]
+      [(boolean? datum) (if datum "true" "false")]
+      [(and (pair? datum) (symbol? (car datum))) (stx->error-element (datum->syntax #f (car datum)))]
+      [else "expression"]))
+
+  (define (resolve-error stx message)
+    (displayln
+     (format "[line ~a] Error at '~a': ~a" (syntax-line stx) (stx->error-element stx) message)
+     (current-error-port))
+    (set! had-error? #t))
 
   (define (begin-scope)
     (set! scopes (cons (make-hash) scopes)))
@@ -21,9 +45,8 @@
     (unless (null? scopes)
       (define scope (car scopes))
       (define name (syntax-e name-stx))
-      (when (and (hash-has-key? scope name)
-                 (not (null? (cdr scopes)))) ;; Only check for duplicates in local scopes (not global)
-        (raise-syntax-error #f "Already a variable with this name in this scope." name-stx))
+      (when (hash-has-key? scope name)
+        (resolve-error name-stx "Already a variable with this name in this scope."))
       (hash-set! scope name #f))) ;; #f = declared, not defined (ready)
 
   (define (define-var name-stx)
@@ -37,7 +60,7 @@
     (unless (null? scopes)
       (define scope (car scopes))
       (when (and (hash-has-key? scope name) (eq? (hash-ref scope name) #f))
-        (raise-syntax-error #f "Can't read local variable in its own initializer." name-stx))))
+        (resolve-error name-stx "Can't read local variable in its own initializer."))))
 
   (define (resolve-function params body type)
     (define enclosing-function current-function)
@@ -51,12 +74,14 @@
     (set! current-function enclosing-function))
 
   (define (resolve-block-body body)
-    ;; Body might be a single expression or a list of statements depending on parser
-    ;; But lox-block usually contains a sequence.
-    ;; If body is (lox-block ...), we unwrap it.
+    ;; Body is a list of statements for lox-function in parser.
+    ;; Or maybe lox-block wrapper.
     (syntax-parse body
       #:datum-literals (lox-block)
       [(lox-block stmt ...)
+       (for ([s (in-list (attribute stmt))])
+         (resolve-stmt s))]
+      [(stmt ...)
        (for ([s (in-list (attribute stmt))])
          (resolve-stmt s))]
       [stmt (resolve-stmt #'stmt)]))
@@ -92,7 +117,7 @@
        (unless (equal? (syntax-e #'super) #f)
          (set! current-class 'subclass)
          (when (eq? (syntax-e #'name) (syntax-e #'super))
-           (raise-syntax-error #f "A class can't inherit from itself." #'super))
+           (resolve-error #'super "A class can't inherit from itself."))
          (begin-scope)
          (hash-set! (car scopes) 'super #t))
 
@@ -123,9 +148,9 @@
       [(lox-print val) (resolve-expr #'val)]
       [(lox-return val)
        (when (eq? current-function 'none)
-         (raise-syntax-error #f "Can't return from top-level code." stmt))
+         (resolve-error stmt "Can't return from top-level code."))
        (when (and (eq? current-function 'initializer) (not (equal? (syntax-e #'val) 'lox-nil)))
-         (raise-syntax-error #f "Can't return a value from an initializer." stmt))
+         (resolve-error stmt "Can't return a value from an initializer."))
        (resolve-expr #'val)]
       [(lox-while cond body)
        (resolve-expr #'cond)
@@ -170,15 +195,24 @@
       [lox-nil (void)]
       [(lox-this keyword)
        (when (eq? current-class 'none)
-         (raise-syntax-error #f "Can't use 'this' outside of a class." #'keyword))]
+         (resolve-error #'keyword "Can't use 'this' outside of a class."))]
       [(lox-super keyword method)
        (when (eq? current-class 'none)
-         (raise-syntax-error #f "Can't use 'super' outside of a class." #'keyword))
+         (resolve-error #'keyword "Can't use 'super' outside of a class."))
        (when (not (eq? current-class 'subclass))
-         (raise-syntax-error #f "Can't use 'super' in a class with no superclass." #'keyword))]
+         (resolve-error #'keyword "Can't use 'super' in a class with no superclass."))
+       (resolve-local #'keyword)]
+      [(lox-literal v)
+       (void)] ; Re-add catch-all or literals handled above? Literal v is handled above.
+      ;; We need a catch-all if expr can be something else.
+      ;; But looking at the list of datum-literals, it seems exhaustive for Lox AST if correct.
+      ;; However, if we missed something, it's safer to have [_ (void)].
       [_ (void)]))
 
   (for ([s stmts])
     (resolve-stmt s))
+
+  (when had-error?
+    (exit 65))
 
   stmts)
