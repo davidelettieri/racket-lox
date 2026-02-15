@@ -2,11 +2,13 @@
 
 (require "lox.rkt"
          (for-syntax racket/base
-                     syntax/parse))
+                     syntax/parse
+                     "lang/resolver.rkt"))
 
 (define-syntax custom-module-begin
   (syntax-parser
     [(_ forms:expr ...)
+     (resolve-statements (syntax->list #'(forms ...)))
      (with-syntax ([(fixed-forms ...) (resolve-redefinitions (syntax->list #'(forms ...)))])
        #'(#%plain-module-begin ;; use module-begin to have expressions printed out
           fixed-forms ...))]))
