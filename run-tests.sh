@@ -1,3 +1,3 @@
 raco setup racket-lox
 cd craftinginterpreters
-dart tool/bin/test.dart chap11_resolving --interpreter racket
+dart tool/bin/test.dart chap12_classes --interpreter racket
