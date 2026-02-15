@@ -1,0 +1,12 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^raco test lang/resolver-tests\\.rkt$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^racket sample\\.lox$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
