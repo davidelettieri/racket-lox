@@ -17,4 +17,10 @@ How to run tests: raco test -x -p racket-lox
 
 How to run single test file: raco test lang/parser-tests.rkt
 
+How to run integration tests in a container (pinned Dart + Racket): ./run-tests.sh
+
+By default integration tests use Podman when available.
+
+How to force Docker instead of Podman: CONTAINER_CLI=docker ./run-tests.sh
+
 How to update the package in the system: raco setup racket-lox
