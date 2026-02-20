@@ -37,4 +37,4 @@ jobs:
         run: make get
 
       - name: Run integration tests
-        run: ./run-tests.sh
+        run: ./run-tests-ci.sh
