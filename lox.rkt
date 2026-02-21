@@ -193,7 +193,7 @@
 
 (define-syntax (lox-call stx)
   (syntax-parse stx
-    [(_ callee arg0 ...)
+    [(_ ((~datum lox-variable) callee) arg0 ...)
      (with-syntax ([line (syntax-line stx)]
                    [param-count (length (syntax->list #'(arg0 ...)))])
        #'(let ([f callee])

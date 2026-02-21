@@ -298,7 +298,25 @@
       [(match 'WHILE) (while-statement)]
       [(match 'LEFT_BRACE) (block-statement)]
       [else (expression-statement)]))
-  ;(trace block declaration block-statement statement for-statement var-declaration assignment print-statement expression or-syntax and-syntax factor unary term comparison equality call primary finish-call)
+  (trace block
+         declaration
+         block-statement
+         statement
+         for-statement
+         var-declaration
+         assignment
+         print-statement
+         expression
+         or-syntax
+         and-syntax
+         factor
+         unary
+         term
+         comparison
+         equality
+         call
+         primary
+         finish-call)
   (define (protected-declaration)
     (with-handlers ([exn:fail:lox? (lambda (e)
                                      (set! _hadError #t)
