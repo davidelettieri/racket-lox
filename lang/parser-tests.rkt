@@ -122,11 +122,10 @@
     (parse-and-assert "f(1, 2);" '((lox-call (lox-variable f) (lox-literal 1.0) (lox-literal 2.0)))))
 
   (test-case "get"
-    (parse-and-assert "a.b;" '((lox-get (lox-variable a) (token IDENTIFIER "b" #f)))))
+    (parse-and-assert "a.b;" '((lox-get (lox-variable a) "b"))))
 
   (test-case "set"
-    (parse-and-assert "a.b = c;"
-                      '((lox-set (lox-variable a) (token IDENTIFIER "b" #f) (lox-variable c)))))
+    (parse-and-assert "a.b = c;" '((lox-set (lox-variable a) "b" (lox-variable c)))))
 
   (test-case "super method"
     (parse-and-assert "super.method();"

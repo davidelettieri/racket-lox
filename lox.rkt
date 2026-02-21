@@ -193,7 +193,7 @@
 
 (define-syntax (lox-call stx)
   (syntax-parse stx
-    [(_ ((~datum lox-variable) callee) arg0 ...)
+    [(_ callee arg0 ...)
      (with-syntax ([line (syntax-line stx)]
                    [param-count (length (syntax->list #'(arg0 ...)))])
        #'(let ([f callee])
@@ -207,20 +207,26 @@
 
 (define-syntax (lox-class stx)
   (syntax-parse stx
+    #:datum-literals (lox-function)
     ;; 1. match the whole structure including the method list shape
-    [(_ name:id #f ((mname:id (marg:id ...) mbody:expr ...) ...))
+    [(_ name:id #f ((lox-function mname:id (marg:id ...) mbody:expr ...) ...))
 
      ;; 2. Create the class name identifier
      (with-syntax ([class-name (format-id #'name "~a%" #'name)])
 
        ;; 3. Output the final syntax
-       #'(define class-name
-           (class object%
-             (super-new)
-             ;; 4. Use the captured pattern variables directly
-             (define/public (mname marg ...)
-               mbody ...) ...)))]
-    [(_ name:id superclass ((mname:id (marg:id ...) mbody:expr ...) ...))
+       #'(begin
+           (define class-name
+             (class object%
+               (super-new)
+               ;; 4. Use the captured pattern variables directly
+               (define/public (mname marg ...)
+                 (let/ec k
+                   (syntax-parameterize ([return-param (make-rename-transformer #'k)])
+                     (lox-block mbody ...)))) ...))
+           (define (name)
+             (make-object class-name))))]
+    [(_ name:id superclass ((lox-function mname:id (marg:id ...) mbody:expr ...) ...))
 
      ;; 2. Create the class name identifier
      (with-syntax ([class-name (format-id #'name "~a%" #'name)]
@@ -231,7 +237,9 @@
              (super-new)
              ;; 4. Use the captured pattern variables directly
              (define/public (mname marg ...)
-               mbody ...) ...)))]))
+               (let/ec k
+                 (syntax-parameterize ([return-param (make-rename-transformer #'k)])
+                   (lox-block mbody ...)))) ...)))]))
 
 (define (lox-runtime-error message line)
   (begin
@@ -242,6 +250,12 @@
 (define-syntax (lox-variable stx)
   (syntax-parse stx
     [(_ name:id) (syntax name)]))
+
+(define-syntax (lox-get stx)
+  (syntax-parse stx
+    [(_ obj method)
+     (with-syntax ([method-name (format-id #'method "~a" #'method)])
+       #'(let ([o obj]) (send obj method-name)))]))
 
 (define-syntax (lox-block stx)
   (syntax-parse stx
@@ -307,4 +321,5 @@
          lox-call
          lox-grouping
          lox-top
+         lox-get
          (for-syntax resolve-redefinitions))
