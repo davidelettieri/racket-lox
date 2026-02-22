@@ -174,6 +174,7 @@
   (cond
     [(boolean? value) (print-bool value)]
     [(eqv? value 'nil) (displayln "nil")]
+    [(lox-class-constructor? value) (displayln (lox-class-constructor-name value))]
     [(procedure? value)
      (let ([function-name (object-name value)])
        (if (eqv? function-name 'clock)
@@ -205,6 +206,8 @@
                     line))
                (lox-runtime-error "Can only call functions and classes." line))))]))
 
+(struct lox-class-constructor (base name) #:property prop:procedure (struct-field-index base))
+
 (define-syntax (lox-class stx)
   (syntax-parse stx
     #:datum-literals (lox-function)
@@ -224,22 +227,27 @@
                  (let/ec k
                    (syntax-parameterize ([return-param (make-rename-transformer #'k)])
                      (lox-block mbody ...)))) ...))
-           (define (name)
-             (make-object class-name))))]
+           (define name
+             (lox-class-constructor (lambda () (make-object class-name))
+                                    (symbol->string (syntax-e #'name))))))]
     [(_ name:id superclass ((lox-function mname:id (marg:id ...) mbody:expr ...) ...))
 
      ;; 2. Create the class name identifier
      (with-syntax ([class-name (format-id #'name "~a%" #'name)]
                    [superclass-name (format-id #'superclass "~a%" #'superclass)])
        ;; 3. Output the final syntax
-       #'(define class-name
-           (class superclass-name
-             (super-new)
-             ;; 4. Use the captured pattern variables directly
-             (define/public (mname marg ...)
-               (let/ec k
-                 (syntax-parameterize ([return-param (make-rename-transformer #'k)])
-                   (lox-block mbody ...)))) ...)))]))
+       #'(begin
+           (define class-name
+             (class superclass-name
+               (super-new)
+               ;; 4. Use the captured pattern variables directly
+               (define/public (mname marg ...)
+                 (let/ec k
+                   (syntax-parameterize ([return-param (make-rename-transformer #'k)])
+                     (lox-block mbody ...)))) ...)
+             (define name
+               (lox-class-constructor (lambda () (make-object class-name))
+                                      (symbol->string (syntax-e #'name)))))))]))
 
 (define (lox-runtime-error message line)
   (begin
