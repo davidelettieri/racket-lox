@@ -7,6 +7,14 @@
         "/^racket sample\\.lox$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^raco test lox-tests\\.rkt$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^raco test lang/parser-tests\\.rkt$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }

@@ -198,11 +198,11 @@
                    [param-count (length (syntax->list #'(arg0 ...)))])
        #'(let ([f callee])
            (if (procedure? f)
-               (let ([arity (procedure-arity f)])
-                 (if (eq? param-count arity)
-                     (f arg0 ...)
-                     (lox-runtime-error (format "Expected ~a arguments but got ~a." arity param-count)
-                                        line)))
+               (if (procedure-arity-includes? f param-count)
+                   (f arg0 ...)
+                   (lox-runtime-error
+                    (format "Expected ~a arguments but got ~a." (procedure-arity f) param-count)
+                    line))
                (lox-runtime-error "Can only call functions and classes." line))))]))
 
 (define-syntax (lox-class stx)
@@ -253,9 +253,12 @@
 
 (define-syntax (lox-get stx)
   (syntax-parse stx
-    [(_ obj method)
-     (with-syntax ([method-name (format-id #'method "~a" #'method)])
-       #'(let ([o obj]) (send obj method-name)))]))
+    [(_ obj method:id)
+     (with-syntax ([method-sym (syntax-e #'method)])
+       #'(let ([o obj]) (lambda args (apply dynamic-send o 'method-sym args))))]
+    [(_ obj method:str)
+     (with-syntax ([method-sym (string->symbol (syntax-e #'method))])
+       #'(let ([o obj]) (lambda args (apply dynamic-send o 'method-sym args))))]))
 
 (define-syntax (lox-block stx)
   (syntax-parse stx
