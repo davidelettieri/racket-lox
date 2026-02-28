@@ -27,8 +27,12 @@
   (test-case "class declaration with superclass"
     (parse-and-assert "class A < B {}" '((lox-class A B ()))))
 
-  (test-case "class declaration with methods"
+  (test-case "class declaration with one method"
     (parse-and-assert "class A { m() {} }" '((lox-class A #f ((lox-function m () ()))))))
+
+  (test-case "class declaration with two methods"
+    (parse-and-assert "class A { m() {} n() {} }"
+                      '((lox-class A #f ((lox-function m () ()) (lox-function n () ()))))))
 
   (test-case "fun declaration"
     (parse-and-assert "fun f(a, b) {}" '((lox-function f (a b) ()))))
@@ -133,7 +137,7 @@
                                              (token IDENTIFIER "method" #f))))))
 
   (test-case "this"
-    (parse-and-assert "this;" '((lox-this (token THIS "this" #f)))))
+    (parse-and-assert "this;" '(lox-this)))
 
   (test-case "grouping"
     (parse-and-assert "(1);" '((lox-grouping (lox-literal 1.0)))))

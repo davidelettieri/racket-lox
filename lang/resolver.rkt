@@ -193,14 +193,14 @@
       [(lox-grouping e) (resolve-expr #'e)]
       [(lox-literal v) (void)]
       [lox-nil (void)]
-      [(lox-this keyword)
+      [lox-this
        (when (eq? current-class 'none)
-         (resolve-error #'keyword "Can't use 'this' outside of a class."))]
+         (resolve-error expr "Can't use 'this' outside of a class."))]
       [(lox-super keyword method)
        (when (eq? current-class 'none)
-         (resolve-error #'keyword "Can't use 'super' outside of a class."))
+         (resolve-error expr "Can't use 'super' outside of a class."))
        (when (not (eq? current-class 'subclass))
-         (resolve-error #'keyword "Can't use 'super' in a class with no superclass."))
+         (resolve-error expr "Can't use 'super' in a class with no superclass."))
        (resolve-local #'keyword)]
       ;; We need a catch-all if expr can be something else.
       ;; But looking at the list of datum-literals, it seems exhaustive for Lox AST if correct.

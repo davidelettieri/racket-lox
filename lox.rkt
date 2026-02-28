@@ -198,7 +198,7 @@
      (with-syntax ([line (syntax-line stx)]
                    [param-count (length (syntax->list #'(arg0 ...)))])
        #'(let ([f callee])
-           (if (procedure? f)
+           (if (and (procedure? f) (not (lox-class-instance? f)))
                (if (procedure-arity-includes? f param-count)
                    (f arg0 ...)
                    (lox-runtime-error
@@ -207,47 +207,81 @@
                (lox-runtime-error "Can only call functions and classes." line))))]))
 
 (struct lox-class-constructor (base name) #:property prop:procedure (struct-field-index base))
+(struct lox-class-instance (base name) #:property prop:procedure (struct-field-index base))
 
 (define-syntax (lox-class stx)
   (syntax-parse stx
     #:datum-literals (lox-function)
-    ;; 1. match the whole structure including the method list shape
-    [(_ name:id #f ((lox-function mname:id (marg:id ...) mbody:expr ...) ...))
-
-     ;; 2. Create the class name identifier
-     (with-syntax ([class-name (format-id #'name "~a%" #'name)])
-
-       ;; 3. Output the final syntax
-       #'(begin
-           (define class-name
-             (class object%
-               (super-new)
-               ;; 4. Use the captured pattern variables directly
-               (define/public (mname marg ...)
-                 (let/ec k
-                   (syntax-parameterize ([return-param (make-rename-transformer #'k)])
-                     (lox-block mbody ...)))) ...))
-           (define name
-             (lox-class-constructor (lambda () (make-object class-name))
-                                    (symbol->string (syntax-e #'name))))))]
-    [(_ name:id superclass ((lox-function mname:id (marg:id ...) mbody:expr ...) ...))
-
-     ;; 2. Create the class name identifier
-     (with-syntax ([class-name (format-id #'name "~a%" #'name)]
-                   [superclass-name (format-id #'superclass "~a%" #'superclass)])
-       ;; 3. Output the final syntax
-       #'(begin
-           (define class-name
-             (class superclass-name
-               (super-new)
-               ;; 4. Use the captured pattern variables directly
-               (define/public (mname marg ...)
-                 (let/ec k
-                   (syntax-parameterize ([return-param (make-rename-transformer #'k)])
-                     (lox-block mbody ...)))) ...)
-             (define name
-               (lox-class-constructor (lambda () (make-object class-name))
-                                      (symbol->string (syntax-e #'name)))))))]))
+    [(_ class-name:id #f ((lox-function m-name:id (m-arg:id ...) (m-body:expr ...)) ...))
+     #:do [(define methods-list (syntax->list #'(((m-name m-arg ...) m-body ...) ...)))
+           (define (is-init? m-stx)
+             (syntax-parse m-stx
+               #:datum-literals (init)
+               [((init . _) _ ...) #t]
+               [_ #f]))
+           (define init-stx (findf is-init? methods-list))
+           (define regular-stxs (filter (lambda (m) (not (is-init? m))) methods-list))]
+     (with-syntax ([(init-args ...) (if init-stx
+                                        (syntax-parse init-stx
+                                          [((_ arg:id ...) _ ...) #'(arg ...)])
+                                        #'())]
+                   [(init-expr ...) (if init-stx
+                                        (syntax-parse init-stx
+                                          [((_ _ ...) b ...) #'(b ...)])
+                                        #'())]
+                   [(((reg-name reg-arg ...) reg-body ...) ...) regular-stxs])
+       #'(define class-name
+           (lox-class-constructor
+            (lambda (init-args ...)
+              (define (reg-name reg-arg ...)
+                (let/ec k
+                  (syntax-parameterize ([return-param (make-rename-transformer #'k)])
+                    (lox-block reg-body ...)))) ...
+              (let/ec k
+                (syntax-parameterize ([return-param (make-rename-transformer #'k)])
+                  (lox-block init-expr ...)))
+              (lox-class-instance
+               (lambda (msg . args)
+                 (case msg
+                   [(reg-name) (apply reg-name args)] ...
+                   [else (lox-runtime-error (format "Undefined property '~a'." msg) 0)]))
+               (symbol->string (syntax-e #'class-name))))
+            (symbol->string (syntax-e #'class-name)))))]
+    [(_ class-name:id superclass:id ((lox-function m-name:id (m-arg:id ...) (m-body:expr ...)) ...))
+     #:do [(define methods-list (syntax->list #'(((m-name m-arg ...) m-body ...) ...)))
+           (define (is-init? m-stx)
+             (syntax-parse m-stx
+               #:datum-literals (init)
+               [((init . _) _ ...) #t]
+               [_ #f]))
+           (define init-stx (findf is-init? methods-list))
+           (define regular-stxs (filter (lambda (m) (not (is-init? m))) methods-list))]
+     (with-syntax ([(init-args ...) (if init-stx
+                                        (syntax-parse init-stx
+                                          [((_ arg:id ...) _ ...) #'(arg ...)])
+                                        #'())]
+                   [(init-expr ...) (if init-stx
+                                        (syntax-parse init-stx
+                                          [((_ _ ...) b ...) #'(b ...)])
+                                        #'())]
+                   [(((reg-name reg-arg ...) reg-body ...) ...) regular-stxs])
+       #'(define class-name
+           (lox-class-constructor
+            (lambda (init-args ...)
+              (define super-instance (lox-call superclass))
+              (define (reg-name reg-arg ...)
+                (let/ec k
+                  (syntax-parameterize ([return-param (make-rename-transformer #'k)])
+                    (lox-block reg-body ...)))) ...
+              (let/ec k
+                (syntax-parameterize ([return-param (make-rename-transformer #'k)])
+                  (lox-block init-expr ...)))
+              (lox-class-instance (lambda (msg . args)
+                                    (case msg
+                                      [(reg-name) (apply reg-name args)] ...
+                                      [else (apply super-instance msg args)]))
+                                  (symbol->string (syntax-e #'class-name))))
+            (symbol->string (syntax-e #'class-name)))))]))
 
 (define (lox-runtime-error message line)
   (begin
@@ -263,10 +297,18 @@
   (syntax-parse stx
     [(_ obj method:id)
      (with-syntax ([method-sym (syntax-e #'method)])
-       #'(let ([o obj]) (lambda args (apply dynamic-send o 'method-sym args))))]
+       #'(let ([o obj])
+           (lambda args
+             (if (procedure? o)
+                 (apply o 'method-sym args)
+                 (apply dynamic-send o 'method-sym args)))))]
     [(_ obj method:str)
      (with-syntax ([method-sym (string->symbol (syntax-e #'method))])
-       #'(let ([o obj]) (lambda args (apply dynamic-send o 'method-sym args))))]))
+       #'(let ([o obj])
+           (lambda args
+             (if (procedure? o)
+                 (apply o 'method-sym args)
+                 (apply dynamic-send o 'method-sym args)))))]))
 
 (define-syntax (lox-block stx)
   (syntax-parse stx
