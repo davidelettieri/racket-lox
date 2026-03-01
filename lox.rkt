@@ -103,6 +103,8 @@
 (define-syntax-parameter return-param
   (lambda (stx) (raise-syntax-error #f "return used outside of function" stx)))
 
+(define current-call-line (make-parameter 0))
+
 (define-syntax (lox-return stx)
   (syntax-parse stx
     [(_ val) #'(return-param val)]))
@@ -185,6 +187,17 @@
 (define (print-bool value)
   (displayln (if value "true" "false")))
 
+(define (lox-call-impl f args line)
+  (define param-count (length args))
+  (if (and (procedure? f) (not (lox-class-instance? f)))
+      (if (procedure-arity-includes? f param-count)
+          (parameterize ([current-call-line line])
+            (apply f args))
+          (lox-runtime-error
+           (format "Expected ~a arguments but got ~a." (procedure-arity f) param-count)
+           line))
+      (lox-runtime-error "Can only call functions and classes." line)))
+
 (define-syntax (lox-if stx)
   (syntax-parse stx
     [(_ cond then)
@@ -195,16 +208,8 @@
 (define-syntax (lox-call stx)
   (syntax-parse stx
     [(_ callee arg0 ...)
-     (with-syntax ([line (syntax-line stx)]
-                   [param-count (length (syntax->list #'(arg0 ...)))])
-       #'(let ([f callee])
-           (if (and (procedure? f) (not (lox-class-instance? f)))
-               (if (procedure-arity-includes? f param-count)
-                   (f arg0 ...)
-                   (lox-runtime-error
-                    (format "Expected ~a arguments but got ~a." (procedure-arity f) param-count)
-                    line))
-               (lox-runtime-error "Can only call functions and classes." line))))]))
+     (with-syntax ([line (syntax-line stx)])
+       #'(lox-call-impl callee (list arg0 ...) line))]))
 
 (struct lox-class-constructor (base name) #:property prop:procedure (struct-field-index base))
 (struct lox-class-instance (base name) #:property prop:procedure (struct-field-index base))
@@ -233,18 +238,16 @@
        #'(define class-name
            (lox-class-constructor
             (lambda (init-args ...)
-              (define (reg-name reg-arg ...)
-                (let/ec k
-                  (syntax-parameterize ([return-param (make-rename-transformer #'k)])
-                    (lox-block reg-body ...)))) ...
+              (lox-function reg-name (reg-arg ...) (reg-body ...)) ...
               (let/ec k
                 (syntax-parameterize ([return-param (make-rename-transformer #'k)])
                   (lox-block init-expr ...)))
               (lox-class-instance
                (lambda (msg . args)
                  (case msg
-                   [(reg-name) (apply reg-name args)] ...
-                   [else (lox-runtime-error (format "Undefined property '~a'." msg) 0)]))
+                   [(reg-name) (lox-call-impl reg-name args (current-call-line))] ...
+                   [else
+                    (lox-runtime-error (format "Undefined property '~a'." msg) (current-call-line))]))
                (symbol->string (syntax-e #'class-name))))
             (symbol->string (syntax-e #'class-name)))))]
     [(_ class-name:id superclass:id ((lox-function m-name:id (m-arg:id ...) (m-body:expr ...)) ...))
@@ -265,23 +268,21 @@
                                           [((_ _ ...) b ...) #'(b ...)])
                                         #'())]
                    [(((reg-name reg-arg ...) reg-body ...) ...) regular-stxs])
-       #'(define class-name
-           (lox-class-constructor
-            (lambda (init-args ...)
-              (define super-instance (lox-call superclass))
-              (define (reg-name reg-arg ...)
-                (let/ec k
-                  (syntax-parameterize ([return-param (make-rename-transformer #'k)])
-                    (lox-block reg-body ...)))) ...
-              (let/ec k
-                (syntax-parameterize ([return-param (make-rename-transformer #'k)])
-                  (lox-block init-expr ...)))
-              (lox-class-instance (lambda (msg . args)
-                                    (case msg
-                                      [(reg-name) (apply reg-name args)] ...
-                                      [else (apply super-instance msg args)]))
-                                  (symbol->string (syntax-e #'class-name))))
-            (symbol->string (syntax-e #'class-name)))))]))
+       #'
+       (define class-name
+         (lox-class-constructor
+          (lambda (init-args ...)
+            (define super-instance (lox-call superclass))
+            (lox-function reg-name (reg-arg ...) (reg-body ...)) ...
+            (let/ec k
+              (syntax-parameterize ([return-param (make-rename-transformer #'k)])
+                (lox-block init-expr ...)))
+            (lox-class-instance (lambda (msg . args)
+                                  (case msg
+                                    [(reg-name) (lox-call-impl reg-name args (current-call-line))] ...
+                                    [else (apply super-instance msg args)]))
+                                (symbol->string (syntax-e #'class-name))))
+          (symbol->string (syntax-e #'class-name)))))]))
 
 (define (lox-runtime-error message line)
   (begin
