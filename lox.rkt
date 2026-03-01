@@ -143,11 +143,11 @@
                   [impl-id (format-id #'name "~a-impl" #'name)])
       (syntax-case stx ()
         [(_ a b)
-         (syntax (define (impl-id a b)
-                   (op a b)))
-         (syntax (if (and (number? a) (number? b))
-                     (op a b)
-                     (lox-runtime-error "Operands must be numbers." line)))]))))
+         (syntax (let ([av a]
+                       [bv b])
+                   (if (and (number? av) (number? bv))
+                       (op av bv)
+                       (lox-runtime-error "Operands must be numbers." line))))]))))
 
 (lox-binary-number-op lox-divide /)
 (lox-binary-number-op lox-multiply *)
@@ -165,10 +165,9 @@
   (syntax-parse stx
     [(_ name:id val:expr)
      (if (identifier-binding #'name)
-         #'(begin
-             (let ([c val])
-               (set! name c)
-               c))
+         #'(let ([c val])
+             (set! name c)
+             c)
          (with-syntax ([line (or (syntax-line #'name) (syntax-line stx) 0)]
                        [str-id (symbol->string (syntax-e #'name))])
            #'(lox-runtime-error (format "Undefined variable '~a'." str-id) line)))]))
@@ -239,7 +238,7 @@
 (define-syntax (lox-class stx)
   (syntax-parse stx
     #:datum-literals (lox-function)
-    [(_ class-name:id #f ((lox-function m-name:id (m-arg:id ...) (m-body:expr ...)) ...))
+    [(_ class-name:id superclass ((lox-function m-name:id (m-arg:id ...) (m-body:expr ...)) ...))
      #:do [(define methods-list (syntax->list #'(((m-name m-arg ...) m-body ...) ...)))
            (define (is-init? m-stx)
              (syntax-parse m-stx
@@ -247,7 +246,8 @@
                [((init . _) _ ...) #t]
                [_ #f]))
            (define init-stx (findf is-init? methods-list))
-           (define regular-stxs (filter (lambda (m) (not (is-init? m))) methods-list))]
+           (define regular-stxs (filter (lambda (m) (not (is-init? m))) methods-list))
+           (define has-super? (syntax-e #'superclass))]
      (with-syntax ([(init-args ...) (if init-stx
                                         (syntax-parse init-stx
                                           [((_ arg:id ...) _ ...) #'(arg ...)])
@@ -256,56 +256,22 @@
                                         (syntax-parse init-stx
                                           [((_ _ ...) b ...) #'(b ...)])
                                         #'())]
-                   [(((reg-name reg-arg ...) reg-body ...) ...) regular-stxs])
+                   [(((reg-name reg-arg ...) reg-body ...) ...) regular-stxs]
+                   [(super-decl ...) (if has-super?
+                                         #'((define super-instance (lox-call superclass)))
+                                         #'())]
+                   [fallback-get (if has-super?
+                                     #'(super-instance lox-get-method-msg prop)
+                                     #'#f)]
+                   [fallback-call (if has-super?
+                                      #'(apply super-instance msg args)
+                                      #'(lox-runtime-error (format "Undefined property '~a'." msg)
+                                                           (current-call-line)))])
        #'(define class-name
            (lox-class-constructor
             (lambda (init-args ...)
               (define fields (make-hash))
-              (lox-function reg-name (reg-arg ...) (reg-body ...)) ...
-              (let/ec k
-                (syntax-parameterize ([return-param (make-rename-transformer #'k)])
-                  (lox-block init-expr ...)))
-              (lox-class-instance
-               (lambda (msg . args)
-                 (cond
-                   [(eq? msg lox-get-method-msg)
-                    (define prop (car args))
-                    (case prop
-                      [(reg-name) (lambda m-args (lox-call-impl reg-name m-args (current-call-line)))]
-                      ...
-                      [else #f])]
-                   [else
-                    (case msg
-                      [(reg-name) (lox-call-impl reg-name args (current-call-line))] ...
-                      [else
-                       (lox-runtime-error (format "Undefined property '~a'." msg)
-                                          (current-call-line))])]))
-               (symbol->string (syntax-e #'class-name))
-               fields))
-            (symbol->string (syntax-e #'class-name)))))]
-    [(_ class-name:id superclass:id ((lox-function m-name:id (m-arg:id ...) (m-body:expr ...)) ...))
-     #:do [(define methods-list (syntax->list #'(((m-name m-arg ...) m-body ...) ...)))
-           (define (is-init? m-stx)
-             (syntax-parse m-stx
-               #:datum-literals (init)
-               [((init . _) _ ...) #t]
-               [_ #f]))
-           (define init-stx (findf is-init? methods-list))
-           (define regular-stxs (filter (lambda (m) (not (is-init? m))) methods-list))]
-     (with-syntax ([(init-args ...) (if init-stx
-                                        (syntax-parse init-stx
-                                          [((_ arg:id ...) _ ...) #'(arg ...)])
-                                        #'())]
-                   [(init-expr ...) (if init-stx
-                                        (syntax-parse init-stx
-                                          [((_ _ ...) b ...) #'(b ...)])
-                                        #'())]
-                   [(((reg-name reg-arg ...) reg-body ...) ...) regular-stxs])
-       #'(define class-name
-           (lox-class-constructor
-            (lambda (init-args ...)
-              (define fields (make-hash))
-              (define super-instance (lox-call superclass))
+              super-decl ...
               (lox-function reg-name (reg-arg ...) (reg-body ...)) ...
               (let/ec k
                 (syntax-parameterize ([return-param (make-rename-transformer #'k)])
@@ -320,13 +286,11 @@
                         [(reg-name)
                          (lambda m-args (lox-call-impl reg-name m-args (current-call-line)))] ...
                         [else #f]))
-                    (if maybe-local
-                        maybe-local
-                        (super-instance lox-get-method-msg prop))]
+                    (if maybe-local maybe-local fallback-get)]
                    [else
                     (case msg
                       [(reg-name) (lox-call-impl reg-name args (current-call-line))] ...
-                      [else (apply super-instance msg args)])]))
+                      [else fallback-call])]))
                (symbol->string (syntax-e #'class-name))
                fields))
             (symbol->string (syntax-e #'class-name)))))]))
