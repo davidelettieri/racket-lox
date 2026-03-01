@@ -227,11 +227,7 @@
         (if maybe-method
             maybe-method
             (lox-runtime-error (format "Undefined property '~a'." method-sym) line))])]
-    [else
-     (lambda args
-       (if (procedure? o)
-           (apply o method-sym args)
-           (apply dynamic-send o method-sym args)))]))
+    [else (lox-runtime-error "Only instances have properties." line)]))
 
 (define (lox-set-impl o method-sym value line)
   (cond
