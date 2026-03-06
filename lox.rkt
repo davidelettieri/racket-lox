@@ -103,6 +103,9 @@
 (define-syntax-parameter return-param
   (lambda (stx) (raise-syntax-error #f "return used outside of function" stx)))
 
+(define-syntax-parameter this-param
+  (lambda (stx) (raise-syntax-error #f "this used outside of class" stx)))
+
 (define current-call-line (make-parameter 0))
 (define lox-get-method-msg '__lox-get-method__)
 
@@ -246,17 +249,12 @@
                [((init . _) _ ...) #t]
                [_ #f]))
            (define init-stx (findf is-init? methods-list))
-           (define regular-stxs (filter (lambda (m) (not (is-init? m))) methods-list))
            (define has-super? (syntax-e #'superclass))]
      (with-syntax ([(init-args ...) (if init-stx
                                         (syntax-parse init-stx
                                           [((_ arg:id ...) _ ...) #'(arg ...)])
                                         #'())]
-                   [(init-expr ...) (if init-stx
-                                        (syntax-parse init-stx
-                                          [((_ _ ...) b ...) #'(b ...)])
-                                        #'())]
-                   [(((reg-name reg-arg ...) reg-body ...) ...) regular-stxs]
+                   [(((method-name method-arg ...) method-body ...) ...) methods-list]
                    [(super-decl ...) (if has-super?
                                          #'((define super-instance (lox-call superclass)))
                                          #'())]
@@ -272,27 +270,39 @@
             (lambda (init-args ...)
               (define fields (make-hash))
               super-decl ...
-              (lox-function reg-name (reg-arg ...) (reg-body ...)) ...
-              (let/ec k
-                (syntax-parameterize ([return-param (make-rename-transformer #'k)])
-                  (lox-block init-expr ...)))
-              (lox-class-instance
-               (lambda (msg . args)
-                 (cond
-                   [(eq? msg lox-get-method-msg)
-                    (define prop (car args))
-                    (define maybe-local
-                      (case prop
-                        [(reg-name)
-                         (lambda m-args (lox-call-impl reg-name m-args (current-call-line)))] ...
-                        [else #f]))
-                    (if maybe-local maybe-local fallback-get)]
-                   [else
-                    (case msg
-                      [(reg-name) (lox-call-impl reg-name args (current-call-line))] ...
-                      [else fallback-call])]))
-               (symbol->string (syntax-e #'class-name))
-               fields))
+              (define self #f)
+              (define (lookup-local-method prop)
+                (case prop
+                  [(method-name)
+                   (procedure-rename
+                    (lambda (method-arg ...)
+                      (let ([this self])
+                        (define result
+                          (let/ec k
+                            (syntax-parameterize ([return-param (make-rename-transformer #'k)]
+                                                  [this-param (make-rename-transformer #'this)])
+                              (lox-block method-body ...))))
+                        (if (eq? 'method-name 'init) this result)))
+                    'method-name)] ...
+                  [else #f]))
+              (set! self
+                    (lox-class-instance (lambda (msg . args)
+                                          (cond
+                                            [(eq? msg lox-get-method-msg)
+                                             (define prop (car args))
+                                             (define maybe-local (lookup-local-method prop))
+                                             (if maybe-local maybe-local fallback-get)]
+                                            [else
+                                             (define maybe-local (lookup-local-method msg))
+                                             (if maybe-local
+                                                 (lox-call-impl maybe-local args (current-call-line))
+                                                 fallback-call)]))
+                                        (symbol->string (syntax-e #'class-name))
+                                        fields))
+              (define maybe-init (lookup-local-method 'init))
+              (when maybe-init
+                (lox-call-impl maybe-init (list init-args ...) (current-call-line)))
+              self)
             (symbol->string (syntax-e #'class-name)))))]))
 
 (define (lox-runtime-error message line)
@@ -304,6 +314,10 @@
 (define-syntax (lox-variable stx)
   (syntax-parse stx
     [(_ name:id) (syntax name)]))
+
+(define-syntax (lox-this stx)
+  (syntax-parse stx
+    [_ #'this-param]))
 
 (define-syntax (lox-get stx)
   (syntax-parse stx
@@ -386,6 +400,7 @@
          lox-class
          lox-literal
          lox-variable
+         lox-this
          lox-if
          lox-while
          lox-call
