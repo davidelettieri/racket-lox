@@ -260,14 +260,39 @@
      value]
     [else (lox-runtime-error "Only instances have fields." line)]))
 
+(define (make-lox-class-constructor class-name-str superclass-value lookup-local-method)
+  (letrec ([klass (lox-class-constructor
+                   (lambda ctor-args
+                     (define fields (make-hash))
+                     (define self #f)
+                     (set! self
+                           (lox-class-instance (lambda (msg . args)
+                                                 (cond
+                                                   [(eq? msg lox-get-method-msg)
+                                                    (define prop (car args))
+                                                    (lox-class-find-method klass prop self)]
+                                                   [else #f]))
+                                               class-name-str
+                                               fields))
+                     (define maybe-init (lox-class-find-method klass 'init self))
+                     (when maybe-init
+                       (lox-call-impl maybe-init ctor-args (current-call-line)))
+                     (when (and (not maybe-init) (not (null? ctor-args)))
+                       (lox-runtime-error (format "Expected 0 arguments but got ~a."
+                                                  (length ctor-args))
+                                          (current-call-line)))
+                     self)
+                   class-name-str
+                   lookup-local-method
+                   superclass-value)])
+    klass))
+
 (define-syntax (lox-class stx)
   (syntax-parse stx
     #:datum-literals (lox-function)
     [(_ class-name:id superclass ((lox-function m-name:id (m-arg:id ...) (m-body:expr ...)) ...))
-     #:do [(define methods-list (syntax->list #'(((m-name m-arg ...) m-body ...) ...)))
-           (define has-super? (syntax-e #'superclass))]
-     (with-syntax ([(((method-name method-arg ...) method-body ...) ...) methods-list]
-                   [class-line (or (syntax-line #'class-name) (syntax-line stx) 0)]
+     #:do [(define has-super? (not (eq? (syntax-e #'superclass) #f)))]
+     (with-syntax ([class-line (or (syntax-line #'class-name) (syntax-line stx) 0)]
                    [superclass-expr (if has-super? #'superclass #'#f)])
        #'(define class-name
            (let ([superclass-value superclass-expr])
@@ -275,9 +300,9 @@
                (lox-runtime-error "Superclass must be a class." class-line))
              (define (lookup-local-method prop receiver)
                (case prop
-                 [(method-name)
+                 [(m-name)
                   (procedure-rename
-                   (lambda (method-arg ...)
+                   (lambda (m-arg ...)
                      (let ([this receiver]
                            [super superclass-value])
                        (define result
@@ -285,36 +310,13 @@
                            (syntax-parameterize ([return-param (make-rename-transformer #'k)]
                                                  [this-param (make-rename-transformer #'this)]
                                                  [super-param (make-rename-transformer #'super)])
-                             (lox-block method-body ...))))
-                       (if (eq? 'method-name 'init) this result)))
-                   'method-name)] ...
+                             (lox-block m-body ...))))
+                       (if (eq? 'm-name 'init) this result)))
+                   'm-name)] ...
                  [else #f]))
-             (lox-class-constructor
-              (lambda ctor-args
-                (define fields (make-hash))
-                (define self #f)
-                (set! self
-                      (lox-class-instance (lambda (msg . args)
-                                            (cond
-                                              [(eq? msg lox-get-method-msg)
-                                               (define prop (car args))
-                                               (define field-present? (hash-has-key? fields prop))
-                                               (if field-present?
-                                                   (hash-ref fields prop)
-                                                   (lox-class-find-method class-name prop self))]
-                                              [else #f]))
-                                          (symbol->string (syntax-e #'class-name))
-                                          fields))
-                (define maybe-init (lox-class-find-method class-name 'init self))
-                (when maybe-init
-                  (lox-call-impl maybe-init ctor-args (current-call-line)))
-                (when (and (not maybe-init) (not (null? ctor-args)))
-                  (lox-runtime-error (format "Expected 0 arguments but got ~a." (length ctor-args))
-                                     (current-call-line)))
-                self)
-              (symbol->string (syntax-e #'class-name))
-              lookup-local-method
-              superclass-value))))]))
+             (make-lox-class-constructor (symbol->string (syntax-e #'class-name))
+                                         superclass-value
+                                         lookup-local-method))))]))
 
 (define (lox-runtime-error message line)
   (begin
@@ -332,7 +334,7 @@
 
 (define-syntax (lox-super stx)
   (syntax-parse stx
-    [(_ _ method:str)
+    [(_ method:str)
      (with-syntax ([method-sym (string->symbol (syntax-e #'method))]
                    [line (or (syntax-line #'method) (syntax-line stx) 0)])
        #'(lox-super-impl super-param this-param 'method-sym line))]))

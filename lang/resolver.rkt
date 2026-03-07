@@ -196,12 +196,12 @@
       [lox-this
        (when (eq? current-class 'none)
          (resolve-error expr "Can't use 'this' outside of a class."))]
-      [(lox-super keyword method)
+      [(lox-super method)
        (cond
          [(eq? current-class 'none) (resolve-error expr "Can't use 'super' outside of a class.")]
          [(not (eq? current-class 'subclass))
           (resolve-error expr "Can't use 'super' in a class with no superclass.")]
-         [else (resolve-local #'keyword)])]
+         [else (resolve-local (datum->syntax expr 'super expr))])]
       ;; We need a catch-all if expr can be something else.
       ;; But looking at the list of datum-literals, it seems exhaustive for Lox AST if correct.
       ;; However, if we missed something, it's safer to have [_ (void)].
