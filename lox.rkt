@@ -115,13 +115,17 @@
   (syntax-parse stx
     [(_ val) #'(return-param val)]))
 
+(define-syntax-rule (lox-run-callable-body ((param binding) ...) stmt ...)
+  (let/ec k
+    (syntax-parameterize ([return-param (make-rename-transformer #'k)]
+                          [param binding] ...)
+      (lox-block stmt ...))))
+
 (define-syntax (lox-function stx)
   (syntax-parse stx
     [(_ name:id (arg:id ...) (stmt ...))
      #'(define (name arg ...)
-         (let/ec k
-           (syntax-parameterize ([return-param (make-rename-transformer #'k)])
-             (lox-block stmt ...))))]))
+         (lox-run-callable-body () stmt ...))]))
 
 (define-syntax (lox-add stx)
   (with-syntax ([line (syntax-line stx)])
@@ -218,21 +222,28 @@
      (with-syntax ([line (syntax-line stx)])
        #'(lox-call-impl callee (list arg0 ...) line))]))
 
-(struct lox-class-constructor (base name lookup superclass)
+(struct lox-class-constructor (base name method-table superclass)
   #:property prop:procedure
   (struct-field-index base))
 (struct lox-class-instance (class fields))
 
-(define (lox-class-find-method klass prop receiver)
+(define (lox-method-table-ref method-table prop)
+  (hash-ref method-table prop #f))
+
+(define (lox-class-find-method-factory klass prop)
   (cond
     [(not klass) #f]
     [else
-     (or ((lox-class-constructor-lookup klass) prop receiver)
-         (lox-class-find-method (lox-class-constructor-superclass klass) prop receiver))]))
+     (or (lox-method-table-ref (lox-class-constructor-method-table klass) prop)
+         (lox-class-find-method-factory (lox-class-constructor-superclass klass) prop))]))
+
+(define (lox-class-bind-method klass prop receiver)
+  (define maybe-factory (lox-class-find-method-factory klass prop))
+  (and maybe-factory (maybe-factory receiver)))
 
 (define (lox-super-impl superclass receiver method-sym line)
   (if (lox-class-constructor? superclass)
-      (let ([method (lox-class-find-method superclass method-sym receiver)])
+      (let ([method (lox-class-bind-method superclass method-sym receiver)])
         (if method
             method
             (lox-runtime-error (format "Undefined property '~a'." method-sym) line)))
@@ -245,7 +256,7 @@
                method-sym
                (lambda ()
                  (define maybe-method
-                   (lox-class-find-method (lox-class-instance-class o) method-sym o))
+                   (lox-class-bind-method (lox-class-instance-class o) method-sym o))
                  (if maybe-method
                      maybe-method
                      (lox-runtime-error (format "Undefined property '~a'." method-sym) line))))]
@@ -258,12 +269,12 @@
      value]
     [else (lox-runtime-error "Only instances have fields." line)]))
 
-(define (make-lox-class-constructor class-name-str superclass-value lookup-local-method)
+(define (make-lox-class-constructor class-name-str superclass-value method-table)
   (letrec ([klass (lox-class-constructor
                    (lambda ctor-args
                      (define fields (make-hash))
                      (define self (lox-class-instance klass fields))
-                     (define maybe-init (lox-class-find-method klass 'init self))
+                     (define maybe-init (lox-class-bind-method klass 'init self))
                      (when maybe-init
                        (lox-call-impl maybe-init ctor-args (current-call-line)))
                      (when (and (not maybe-init) (not (null? ctor-args)))
@@ -272,7 +283,7 @@
                                           (current-call-line)))
                      self)
                    class-name-str
-                   lookup-local-method
+                   method-table
                    superclass-value)])
     klass))
 
@@ -285,13 +296,17 @@
                       (let ([this receiver]
                             [super superclass-value])
                         (define result
-                          (let/ec k
-                            (syntax-parameterize ([return-param (make-rename-transformer #'k)]
-                                                  [this-param (make-rename-transformer #'this)]
-                                                  [super-param (make-rename-transformer #'super)])
-                              (lox-block m-body ...))))
+                          (lox-run-callable-body ((this-param (make-rename-transformer #'this))
+                                                  (super-param (make-rename-transformer #'super)))
+                                                 m-body ...))
                         (if (eq? 'm-name 'init) this result)))
                     'm-name))
+
+(define-syntax-rule (lox-make-method-factory m-name superclass-value (m-arg ...) m-body ...)
+  (lambda (receiver) (lox-make-bound-method m-name receiver superclass-value (m-arg ...) m-body ...)))
+
+(define-syntax-rule (lox-make-method-entry m-name superclass-value (m-arg ...) m-body ...)
+  (cons 'm-name (lox-make-method-factory m-name superclass-value (m-arg ...) m-body ...)))
 
 (define-syntax (lox-class stx)
   (syntax-parse stx
@@ -301,14 +316,12 @@
        #'(define class-name
            (let ([superclass-value superclass])
              (lox-validate-superclass superclass-value class-line)
-             (define (lookup-local-method prop receiver)
-               (case prop
-                 [(m-name)
-                  (lox-make-bound-method m-name receiver superclass-value (m-arg ...) m-body ...)] ...
-                 [else #f]))
+             (define method-table
+               (make-hasheq
+                (list (lox-make-method-entry m-name superclass-value (m-arg ...) m-body ...) ...)))
              (make-lox-class-constructor (symbol->string 'class-name)
                                          superclass-value
-                                         lookup-local-method))))]))
+                                         method-table))))]))
 
 (define (lox-runtime-error message line)
   (begin
@@ -362,10 +375,7 @@
             #'(let ([name val]) body))]
          [(lox-function name (arg ...) (fstmt ...))
           (with-syntax ([body (expand-block-stmts #'rest)])
-            #'(letrec ([name (lambda (arg ...)
-                               (let/ec k
-                                 (syntax-parameterize ([return-param (make-rename-transformer #'k)])
-                                   (lox-block fstmt ...))))])
+            #'(letrec ([name (lambda (arg ...) (lox-run-callable-body () fstmt ...))])
                 body))]
          [other
           (with-syntax ([body (expand-block-stmts #'rest)])
