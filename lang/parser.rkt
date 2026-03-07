@@ -41,12 +41,15 @@
                         message)])
           (parse-error tok msg))))
   (define (parse-error token message)
-    (raise (exn:fail:lox (format "[line ~a] Error at '~a': ~a"
-                                 (srcloc-line (token-srcloc token))
-                                 (token-lexeme token)
-                                 message)
-                         (current-continuation-marks)
-                         (srcloc-line (token-srcloc token)))))
+    (raise (exn:fail:lox
+            (if (eqv? (token-type token) 'EOF)
+                (format "[line ~a] Error at end: ~a" (srcloc-line (token-srcloc token)) message)
+                (format "[line ~a] Error at '~a': ~a"
+                        (srcloc-line (token-srcloc token))
+                        (token-lexeme token)
+                        message))
+            (current-continuation-marks)
+            (srcloc-line (token-srcloc token)))))
   (define (check type)
     (and (not (is-at-end?)) (eqv? (token-type (peek)) type)))
   (define (check-next type)
@@ -92,7 +95,7 @@
            (set! methods (cons (function "method") methods)))
     (consume 'RIGHT_BRACE "Expect '}' after class body.")
     (define name-id (token->symbol name))
-    (datum->syntax #f `(lox-class ,name-id ,superclass ,methods) (token->src name)))
+    (datum->syntax #f `(lox-class ,name-id ,superclass ,(reverse methods)) (token->src name)))
   (define (function kind)
     (define name (consume 'IDENTIFIER (format "Expect ~a name." kind)))
     (consume 'LEFT_PAREN (format "Expect '(' after ~a name." kind))
@@ -215,7 +218,8 @@
               (begin
                 (define dot (previous))
                 (define name (consume 'IDENTIFIER "Expect property name after '.'."))
-                (set! expr (datum->syntax #f `(lox-get ,expr ,name) (token->src dot))))]
+                (set! expr
+                      (datum->syntax #f `(lox-get ,expr ,(token-lexeme name)) (token->src dot))))]
              [else (set! c #f)]))
     expr)
   (define (primary)
@@ -231,8 +235,10 @@
        (let ([keyword (previous)])
          (consume 'DOT "Expect '.' after 'super'.")
          (define method (consume 'IDENTIFIER "Expect superclass method name."))
-         (datum->syntax #f `(lox-super ,keyword ,method) (token->src keyword)))]
-      [(match 'THIS) (datum->syntax #f `(lox-this ,(previous)) (token->src (previous)))]
+         (datum->syntax #f
+                        `(lox-super ,(token-lexeme keyword) ,(token-lexeme method))
+                        (token->src keyword)))]
+      [(match 'THIS) (datum->syntax #f `lox-this (token->src (previous)))]
       [(match 'IDENTIFIER)
        (datum->syntax #f `(lox-variable ,(token->symbol (previous))) (token->src (previous)))]
       [(match 'LEFT_PAREN)
@@ -298,7 +304,25 @@
       [(match 'WHILE) (while-statement)]
       [(match 'LEFT_BRACE) (block-statement)]
       [else (expression-statement)]))
-  ;(trace block declaration block-statement statement for-statement var-declaration assignment print-statement expression or-syntax and-syntax factor unary term comparison equality call primary finish-call)
+  ; (trace block
+  ;        declaration
+  ;        block-statement
+  ;        statement
+  ;        for-statement
+  ;        var-declaration
+  ;        assignment
+  ;        print-statement
+  ;        expression
+  ;        or-syntax
+  ;        and-syntax
+  ;        factor
+  ;        unary
+  ;        term
+  ;        comparison
+  ;        equality
+  ;        call
+  ;        primary
+  ;        finish-call)
   (define (protected-declaration)
     (with-handlers ([exn:fail:lox? (lambda (e)
                                      (set! _hadError #t)

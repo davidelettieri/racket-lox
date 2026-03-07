@@ -103,6 +103,12 @@
 (define-syntax-parameter return-param
   (lambda (stx) (raise-syntax-error #f "return used outside of function" stx)))
 
+(define-syntax-parameter this-param
+  (lambda (stx) (raise-syntax-error #f "this used outside of class" stx)))
+
+(define current-call-line (make-parameter 0))
+(define lox-get-method-msg '__lox-get-method__)
+
 (define-syntax (lox-return stx)
   (syntax-parse stx
     [(_ val) #'(return-param val)]))
@@ -140,11 +146,11 @@
                   [impl-id (format-id #'name "~a-impl" #'name)])
       (syntax-case stx ()
         [(_ a b)
-         (syntax (define (impl-id a b)
-                   (op a b)))
-         (syntax (if (and (number? a) (number? b))
-                     (op a b)
-                     (lox-runtime-error "Operands must be numbers." line)))]))))
+         (syntax (let ([av a]
+                       [bv b])
+                   (if (and (number? av) (number? bv))
+                       (op av bv)
+                       (lox-runtime-error "Operands must be numbers." line))))]))))
 
 (lox-binary-number-op lox-divide /)
 (lox-binary-number-op lox-multiply *)
@@ -162,10 +168,9 @@
   (syntax-parse stx
     [(_ name:id val:expr)
      (if (identifier-binding #'name)
-         #'(begin
-             (let ([c val])
-               (set! name c)
-               c))
+         #'(let ([c val])
+             (set! name c)
+             c)
          (with-syntax ([line (or (syntax-line #'name) (syntax-line stx) 0)]
                        [str-id (symbol->string (syntax-e #'name))])
            #'(lox-runtime-error (format "Undefined variable '~a'." str-id) line)))]))
@@ -174,6 +179,8 @@
   (cond
     [(boolean? value) (print-bool value)]
     [(eqv? value 'nil) (displayln "nil")]
+    [(lox-class-constructor? value) (displayln (lox-class-constructor-name value))]
+    [(lox-class-instance? value) (displayln (format "~a instance" (lox-class-instance-name value)))]
     [(procedure? value)
      (let ([function-name (object-name value)])
        (if (eqv? function-name 'clock)
@@ -183,6 +190,17 @@
 
 (define (print-bool value)
   (displayln (if value "true" "false")))
+
+(define (lox-call-impl f args line)
+  (define param-count (length args))
+  (if (and (procedure? f) (not (lox-class-instance? f)))
+      (if (procedure-arity-includes? f param-count)
+          (parameterize ([current-call-line line])
+            (apply f args))
+          (lox-runtime-error
+           (format "Expected ~a arguments but got ~a." (procedure-arity f) param-count)
+           line))
+      (lox-runtime-error "Can only call functions and classes." line)))
 
 (define-syntax (lox-if stx)
   (syntax-parse stx
@@ -194,44 +212,98 @@
 (define-syntax (lox-call stx)
   (syntax-parse stx
     [(_ callee arg0 ...)
-     (with-syntax ([line (syntax-line stx)]
-                   [param-count (length (syntax->list #'(arg0 ...)))])
-       #'(let ([f callee])
-           (if (procedure? f)
-               (let ([arity (procedure-arity f)])
-                 (if (eq? param-count arity)
-                     (f arg0 ...)
-                     (lox-runtime-error (format "Expected ~a arguments but got ~a." arity param-count)
-                                        line)))
-               (lox-runtime-error "Can only call functions and classes." line))))]))
+     (with-syntax ([line (syntax-line stx)])
+       #'(lox-call-impl callee (list arg0 ...) line))]))
+
+(struct lox-class-constructor (base name) #:property prop:procedure (struct-field-index base))
+(struct lox-class-instance (base name fields) #:property prop:procedure (struct-field-index base))
+
+(define (lox-get-impl o method-sym line)
+  (cond
+    [(lox-class-instance? o)
+     (define fields (lox-class-instance-fields o))
+     (cond
+       [(hash-has-key? fields method-sym) (hash-ref fields method-sym)]
+       [else
+        (define maybe-method (o lox-get-method-msg method-sym))
+        (if maybe-method
+            maybe-method
+            (lox-runtime-error (format "Undefined property '~a'." method-sym) line))])]
+    [else (lox-runtime-error "Only instances have properties." line)]))
+
+(define (lox-set-impl o method-sym value line)
+  (cond
+    [(lox-class-instance? o)
+     (hash-set! (lox-class-instance-fields o) method-sym value)
+     value]
+    [else (lox-runtime-error "Only instances have fields." line)]))
 
 (define-syntax (lox-class stx)
   (syntax-parse stx
-    ;; 1. match the whole structure including the method list shape
-    [(_ name:id #f ((mname:id (marg:id ...) mbody:expr ...) ...))
-
-     ;; 2. Create the class name identifier
-     (with-syntax ([class-name (format-id #'name "~a%" #'name)])
-
-       ;; 3. Output the final syntax
+    #:datum-literals (lox-function)
+    [(_ class-name:id superclass ((lox-function m-name:id (m-arg:id ...) (m-body:expr ...)) ...))
+     #:do [(define methods-list (syntax->list #'(((m-name m-arg ...) m-body ...) ...)))
+           (define (is-init? m-stx)
+             (syntax-parse m-stx
+               #:datum-literals (init)
+               [((init . _) _ ...) #t]
+               [_ #f]))
+           (define init-stx (findf is-init? methods-list))
+           (define has-super? (syntax-e #'superclass))]
+     (with-syntax ([(init-args ...) (if init-stx
+                                        (syntax-parse init-stx
+                                          [((_ arg:id ...) _ ...) #'(arg ...)])
+                                        #'())]
+                   [(((method-name method-arg ...) method-body ...) ...) methods-list]
+                   [(super-decl ...) (if has-super?
+                                         #'((define super-instance (lox-call superclass)))
+                                         #'())]
+                   [fallback-get (if has-super?
+                                     #'(super-instance lox-get-method-msg prop)
+                                     #'#f)]
+                   [fallback-call (if has-super?
+                                      #'(apply super-instance msg args)
+                                      #'(lox-runtime-error (format "Undefined property '~a'." msg)
+                                                           (current-call-line)))])
        #'(define class-name
-           (class object%
-             (super-new)
-             ;; 4. Use the captured pattern variables directly
-             (define/public (mname marg ...)
-               mbody ...) ...)))]
-    [(_ name:id superclass ((mname:id (marg:id ...) mbody:expr ...) ...))
-
-     ;; 2. Create the class name identifier
-     (with-syntax ([class-name (format-id #'name "~a%" #'name)]
-                   [superclass-name (format-id #'superclass "~a%" #'superclass)])
-       ;; 3. Output the final syntax
-       #'(define class-name
-           (class superclass-name
-             (super-new)
-             ;; 4. Use the captured pattern variables directly
-             (define/public (mname marg ...)
-               mbody ...) ...)))]))
+           (lox-class-constructor
+            (lambda (init-args ...)
+              (define fields (make-hash))
+              super-decl ...
+              (define self #f)
+              (define (lookup-local-method prop)
+                (case prop
+                  [(method-name)
+                   (procedure-rename
+                    (lambda (method-arg ...)
+                      (let ([this self])
+                        (define result
+                          (let/ec k
+                            (syntax-parameterize ([return-param (make-rename-transformer #'k)]
+                                                  [this-param (make-rename-transformer #'this)])
+                              (lox-block method-body ...))))
+                        (if (eq? 'method-name 'init) this result)))
+                    'method-name)] ...
+                  [else #f]))
+              (set! self
+                    (lox-class-instance (lambda (msg . args)
+                                          (cond
+                                            [(eq? msg lox-get-method-msg)
+                                             (define prop (car args))
+                                             (define maybe-local (lookup-local-method prop))
+                                             (if maybe-local maybe-local fallback-get)]
+                                            [else
+                                             (define maybe-local (lookup-local-method msg))
+                                             (if maybe-local
+                                                 (lox-call-impl maybe-local args (current-call-line))
+                                                 fallback-call)]))
+                                        (symbol->string (syntax-e #'class-name))
+                                        fields))
+              (define maybe-init (lookup-local-method 'init))
+              (when maybe-init
+                (lox-call-impl maybe-init (list init-args ...) (current-call-line)))
+              self)
+            (symbol->string (syntax-e #'class-name)))))]))
 
 (define (lox-runtime-error message line)
   (begin
@@ -242,6 +314,24 @@
 (define-syntax (lox-variable stx)
   (syntax-parse stx
     [(_ name:id) (syntax name)]))
+
+(define-syntax (lox-this stx)
+  (syntax-parse stx
+    [_ #'this-param]))
+
+(define-syntax (lox-get stx)
+  (syntax-parse stx
+    [(_ obj method:str)
+     (with-syntax ([method-sym (string->symbol (syntax-e #'method))]
+                   [line (or (syntax-line #'method) (syntax-line stx) 0)])
+       #'(lox-get-impl obj 'method-sym line))]))
+
+(define-syntax (lox-set stx)
+  (syntax-parse stx
+    [(_ obj method:str value:expr)
+     (with-syntax ([method-sym (string->symbol (syntax-e #'method))]
+                   [line (or (syntax-line #'method) (syntax-line stx) 0)])
+       #'(lox-set-impl obj 'method-sym value line))]))
 
 (define-syntax (lox-block stx)
   (syntax-parse stx
@@ -302,9 +392,12 @@
          lox-class
          lox-literal
          lox-variable
+         lox-this
          lox-if
          lox-while
          lox-call
          lox-grouping
          lox-top
+         lox-get
+         lox-set
          (for-syntax resolve-redefinitions))
