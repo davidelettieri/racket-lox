@@ -235,9 +235,7 @@
        (let ([keyword (previous)])
          (consume 'DOT "Expect '.' after 'super'.")
          (define method (consume 'IDENTIFIER "Expect superclass method name."))
-         (datum->syntax #f
-                        `(lox-super ,(token-lexeme keyword) ,(token-lexeme method))
-                        (token->src keyword)))]
+         (datum->syntax #f `(lox-super ,(token-lexeme method)) (token->src keyword)))]
       [(match 'THIS) (datum->syntax #f `lox-this (token->src (previous)))]
       [(match 'IDENTIFIER)
        (datum->syntax #f `(lox-variable ,(token->symbol (previous))) (token->src (previous)))]

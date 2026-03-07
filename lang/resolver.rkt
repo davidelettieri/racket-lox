@@ -44,7 +44,7 @@
   (define (declare name-stx)
     (unless (null? scopes)
       (define scope (car scopes))
-      (define name (syntax-e name-stx))
+      (define name (syntax->datum name-stx))
       (when (hash-has-key? scope name)
         (resolve-error name-stx "Already a variable with this name in this scope."))
       (hash-set! scope name #f))) ;; #f = declared, not defined (ready)
@@ -52,11 +52,11 @@
   (define (define-var name-stx)
     (unless (null? scopes)
       (define scope (car scopes))
-      (define name (syntax-e name-stx))
+      (define name (syntax->datum name-stx))
       (hash-set! scope name #t))) ;; #t = defined (ready)
 
   (define (resolve-local name-stx)
-    (define name (syntax-e name-stx))
+    (define name (syntax->datum name-stx))
     (unless (null? scopes)
       (define scope (car scopes))
       (when (and (hash-has-key? scope name) (eq? (hash-ref scope name) #f))
@@ -114,9 +114,9 @@
        (set! current-class 'class)
        (declare #'name)
        (define-var #'name)
-       (unless (equal? (syntax-e #'super) #f)
+       (unless (equal? (syntax->datum #'super) #f)
          (set! current-class 'subclass)
-         (when (eq? (syntax-e #'name) (syntax-e #'super))
+         (when (eq? (syntax->datum #'name) (syntax->datum #'super))
            (resolve-error #'super "A class can't inherit from itself."))
          (begin-scope)
          (hash-set! (car scopes) 'super #t))
@@ -130,12 +130,12 @@
             (syntax-parse m
               [(lox-function mname (mparam ...) mbody)
                (define declaration 'method)
-               (when (equal? (syntax-e #'mname) 'init)
+               (when (equal? (syntax->datum #'mname) 'init)
                  (set! declaration 'initializer))
                (resolve-function (attribute mparam) #'mbody declaration)]))])
 
        (end-scope)
-       (unless (equal? (syntax-e #'super) #f)
+       (unless (equal? (syntax->datum #'super) #f)
          (end-scope))
        (set! current-class enclosing-class)]
       [(lox-if cond then)
@@ -149,7 +149,7 @@
       [(lox-return val)
        (when (eq? current-function 'none)
          (resolve-error stmt "Can't return from top-level code."))
-       (when (and (eq? current-function 'initializer) (not (equal? (syntax-e #'val) 'lox-nil)))
+       (when (and (eq? current-function 'initializer) (not (equal? (syntax->datum #'val) 'lox-nil)))
          (resolve-error stmt "Can't return a value from an initializer."))
        (resolve-expr #'val)]
       [(lox-while cond body)
@@ -196,12 +196,12 @@
       [lox-this
        (when (eq? current-class 'none)
          (resolve-error expr "Can't use 'this' outside of a class."))]
-      [(lox-super keyword method)
-       (when (eq? current-class 'none)
-         (resolve-error expr "Can't use 'super' outside of a class."))
-       (when (not (eq? current-class 'subclass))
-         (resolve-error expr "Can't use 'super' in a class with no superclass."))
-       (resolve-local #'keyword)]
+      [(lox-super method)
+       (cond
+         [(eq? current-class 'none) (resolve-error expr "Can't use 'super' outside of a class.")]
+         [(not (eq? current-class 'subclass))
+          (resolve-error expr "Can't use 'super' in a class with no superclass.")]
+         [else (resolve-local (datum->syntax expr 'super expr))])]
       ;; We need a catch-all if expr can be something else.
       ;; But looking at the list of datum-literals, it seems exhaustive for Lox AST if correct.
       ;; However, if we missed something, it's safer to have [_ (void)].

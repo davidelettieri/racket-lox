@@ -64,7 +64,7 @@ RUN_ARGS=(
 		mkdir -p "$HOME"
 		raco pkg install --auto --no-docs --link /workspace
 		cd /opt/craftinginterpreters
-		dart tool/bin/test.dart chap12_classes --interpreter racket'
+		dart tool/bin/test.dart chap13_inheritance --interpreter racket'
 )
 
 if [[ "${CONTAINER_CLI}" == "podman" ]]; then
