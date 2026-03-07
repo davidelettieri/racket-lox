@@ -241,14 +241,14 @@
 (define (lox-get-impl o method-sym line)
   (cond
     [(lox-class-instance? o)
-     (define fields (lox-class-instance-fields o))
-     (cond
-       [(hash-has-key? fields method-sym) (hash-ref fields method-sym)]
-       [else
-        (define maybe-method (o lox-get-method-msg method-sym))
-        (if maybe-method
-            maybe-method
-            (lox-runtime-error (format "Undefined property '~a'." method-sym) line))])]
+     (hash-ref (lox-class-instance-fields o)
+               method-sym
+               (lambda ()
+                 (define maybe-method
+                   (lox-class-find-method (lox-class-instance-class o) method-sym o))
+                 (if maybe-method
+                     maybe-method
+                     (lox-runtime-error (format "Undefined property '~a'." method-sym) line))))]
     [else (lox-runtime-error "Only instances have properties." line)]))
 
 (define (lox-set-impl o method-sym value line)
@@ -305,19 +305,17 @@
 (define-syntax (lox-class stx)
   (syntax-parse stx
     #:datum-literals (lox-function)
-    [(_ class-name:id superclass ((lox-function m-name:id (m-arg:id ...) (m-body:expr ...)) ...))
-     #:do [(define has-super? (not (eq? (syntax->datum #'superclass) #f)))]
-     (with-syntax ([class-line (or (syntax-line #'class-name) (syntax-line stx) 0)]
-                   [superclass-expr (if has-super? #'superclass #'#f)])
+    [(_ class-name:id superclass:expr ((lox-function m-name:id (m-arg:id ...) (m-body:expr ...)) ...))
+     (with-syntax ([class-line (or (syntax-line #'class-name) (syntax-line stx) 0)])
        #'(define class-name
-           (let ([superclass-value superclass-expr])
+           (let ([superclass-value superclass])
              (lox-validate-superclass superclass-value class-line)
              (define (lookup-local-method prop receiver)
                (case prop
                  [(m-name)
                   (lox-make-bound-method m-name receiver superclass-value (m-arg ...) m-body ...)] ...
                  [else #f]))
-             (make-lox-class-constructor (symbol->string (syntax->datum #'class-name))
+             (make-lox-class-constructor (symbol->string 'class-name)
                                          superclass-value
                                          lookup-local-method))))]))
 
