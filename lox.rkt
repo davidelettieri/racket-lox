@@ -276,6 +276,23 @@
                    superclass-value)])
     klass))
 
+(define (lox-validate-superclass superclass-value line)
+  (when (and superclass-value (not (lox-class-constructor? superclass-value)))
+    (lox-runtime-error "Superclass must be a class." line)))
+
+(define-syntax-rule (lox-make-bound-method m-name receiver superclass-value (m-arg ...) m-body ...)
+  (procedure-rename (lambda (m-arg ...)
+                      (let ([this receiver]
+                            [super superclass-value])
+                        (define result
+                          (let/ec k
+                            (syntax-parameterize ([return-param (make-rename-transformer #'k)]
+                                                  [this-param (make-rename-transformer #'this)]
+                                                  [super-param (make-rename-transformer #'super)])
+                              (lox-block m-body ...))))
+                        (if (eq? 'm-name 'init) this result)))
+                    'm-name))
+
 (define-syntax (lox-class stx)
   (syntax-parse stx
     #:datum-literals (lox-function)
@@ -285,23 +302,11 @@
                    [superclass-expr (if has-super? #'superclass #'#f)])
        #'(define class-name
            (let ([superclass-value superclass-expr])
-             (when (and superclass-value (not (lox-class-constructor? superclass-value)))
-               (lox-runtime-error "Superclass must be a class." class-line))
+             (lox-validate-superclass superclass-value class-line)
              (define (lookup-local-method prop receiver)
                (case prop
                  [(m-name)
-                  (procedure-rename
-                   (lambda (m-arg ...)
-                     (let ([this receiver]
-                           [super superclass-value])
-                       (define result
-                         (let/ec k
-                           (syntax-parameterize ([return-param (make-rename-transformer #'k)]
-                                                 [this-param (make-rename-transformer #'this)]
-                                                 [super-param (make-rename-transformer #'super)])
-                             (lox-block m-body ...))))
-                       (if (eq? 'm-name 'init) this result)))
-                   'm-name)] ...
+                  (lox-make-bound-method m-name receiver superclass-value (m-arg ...) m-body ...)] ...
                  [else #f]))
              (make-lox-class-constructor (symbol->string (syntax->datum #'class-name))
                                          superclass-value
