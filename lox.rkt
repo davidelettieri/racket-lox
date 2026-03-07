@@ -106,6 +106,9 @@
 (define-syntax-parameter this-param
   (lambda (stx) (raise-syntax-error #f "this used outside of class" stx)))
 
+(define-syntax-parameter super-param
+  (lambda (stx) (raise-syntax-error #f "super used outside of class" stx)))
+
 (define current-call-line (make-parameter 0))
 (define lox-get-method-msg '__lox-get-method__)
 
@@ -194,7 +197,7 @@
 (define (lox-call-impl f args line)
   (define param-count (length args))
   (if (and (procedure? f) (not (lox-class-instance? f)))
-      (if (procedure-arity-includes? f param-count)
+      (if (or (lox-class-constructor? f) (procedure-arity-includes? f param-count))
           (parameterize ([current-call-line line])
             (apply f args))
           (lox-runtime-error
@@ -215,8 +218,27 @@
      (with-syntax ([line (syntax-line stx)])
        #'(lox-call-impl callee (list arg0 ...) line))]))
 
-(struct lox-class-constructor (base name) #:property prop:procedure (struct-field-index base))
+(struct lox-class-constructor (base name lookup superclass)
+  #:property prop:procedure
+  (struct-field-index base))
 (struct lox-class-instance (base name fields) #:property prop:procedure (struct-field-index base))
+
+(define (lox-class-find-method klass prop receiver)
+  (cond
+    [(not klass) #f]
+    [else
+     (define maybe-local ((lox-class-constructor-lookup klass) prop receiver))
+     (if maybe-local
+         maybe-local
+         (lox-class-find-method (lox-class-constructor-superclass klass) prop receiver))]))
+
+(define (lox-super-impl superclass receiver method-sym line)
+  (if (lox-class-constructor? superclass)
+      (let ([method (lox-class-find-method superclass method-sym receiver)])
+        (if method
+            method
+            (lox-runtime-error (format "Undefined property '~a'." method-sym) line)))
+      (lox-runtime-error "Superclass must be a class." line)))
 
 (define (lox-get-impl o method-sym line)
   (cond
@@ -243,67 +265,56 @@
     #:datum-literals (lox-function)
     [(_ class-name:id superclass ((lox-function m-name:id (m-arg:id ...) (m-body:expr ...)) ...))
      #:do [(define methods-list (syntax->list #'(((m-name m-arg ...) m-body ...) ...)))
-           (define (is-init? m-stx)
-             (syntax-parse m-stx
-               #:datum-literals (init)
-               [((init . _) _ ...) #t]
-               [_ #f]))
-           (define init-stx (findf is-init? methods-list))
            (define has-super? (syntax-e #'superclass))]
-     (with-syntax ([(init-args ...) (if init-stx
-                                        (syntax-parse init-stx
-                                          [((_ arg:id ...) _ ...) #'(arg ...)])
-                                        #'())]
-                   [(((method-name method-arg ...) method-body ...) ...) methods-list]
-                   [(super-decl ...) (if has-super?
-                                         #'((define super-instance (lox-call superclass)))
-                                         #'())]
-                   [fallback-get (if has-super?
-                                     #'(super-instance lox-get-method-msg prop)
-                                     #'#f)]
-                   [fallback-call (if has-super?
-                                      #'(apply super-instance msg args)
-                                      #'(lox-runtime-error (format "Undefined property '~a'." msg)
-                                                           (current-call-line)))])
+     (with-syntax ([(((method-name method-arg ...) method-body ...) ...) methods-list]
+                   [class-line (or (syntax-line #'class-name) (syntax-line stx) 0)]
+                   [superclass-expr (if has-super? #'superclass #'#f)])
        #'(define class-name
-           (lox-class-constructor
-            (lambda (init-args ...)
-              (define fields (make-hash))
-              super-decl ...
-              (define self #f)
-              (define (lookup-local-method prop)
-                (case prop
-                  [(method-name)
-                   (procedure-rename
-                    (lambda (method-arg ...)
-                      (let ([this self])
-                        (define result
-                          (let/ec k
-                            (syntax-parameterize ([return-param (make-rename-transformer #'k)]
-                                                  [this-param (make-rename-transformer #'this)])
-                              (lox-block method-body ...))))
-                        (if (eq? 'method-name 'init) this result)))
-                    'method-name)] ...
-                  [else #f]))
-              (set! self
-                    (lox-class-instance (lambda (msg . args)
-                                          (cond
-                                            [(eq? msg lox-get-method-msg)
-                                             (define prop (car args))
-                                             (define maybe-local (lookup-local-method prop))
-                                             (if maybe-local maybe-local fallback-get)]
-                                            [else
-                                             (define maybe-local (lookup-local-method msg))
-                                             (if maybe-local
-                                                 (lox-call-impl maybe-local args (current-call-line))
-                                                 fallback-call)]))
-                                        (symbol->string (syntax-e #'class-name))
-                                        fields))
-              (define maybe-init (lookup-local-method 'init))
-              (when maybe-init
-                (lox-call-impl maybe-init (list init-args ...) (current-call-line)))
-              self)
-            (symbol->string (syntax-e #'class-name)))))]))
+           (let ([superclass-value superclass-expr])
+             (when (and superclass-value (not (lox-class-constructor? superclass-value)))
+               (lox-runtime-error "Superclass must be a class." class-line))
+             (define (lookup-local-method prop receiver)
+               (case prop
+                 [(method-name)
+                  (procedure-rename
+                   (lambda (method-arg ...)
+                     (let ([this receiver]
+                           [super superclass-value])
+                       (define result
+                         (let/ec k
+                           (syntax-parameterize ([return-param (make-rename-transformer #'k)]
+                                                 [this-param (make-rename-transformer #'this)]
+                                                 [super-param (make-rename-transformer #'super)])
+                             (lox-block method-body ...))))
+                       (if (eq? 'method-name 'init) this result)))
+                   'method-name)] ...
+                 [else #f]))
+             (lox-class-constructor
+              (lambda ctor-args
+                (define fields (make-hash))
+                (define self #f)
+                (set! self
+                      (lox-class-instance (lambda (msg . args)
+                                            (cond
+                                              [(eq? msg lox-get-method-msg)
+                                               (define prop (car args))
+                                               (define field-present? (hash-has-key? fields prop))
+                                               (if field-present?
+                                                   (hash-ref fields prop)
+                                                   (lox-class-find-method class-name prop self))]
+                                              [else #f]))
+                                          (symbol->string (syntax-e #'class-name))
+                                          fields))
+                (define maybe-init (lox-class-find-method class-name 'init self))
+                (when maybe-init
+                  (lox-call-impl maybe-init ctor-args (current-call-line)))
+                (when (and (not maybe-init) (not (null? ctor-args)))
+                  (lox-runtime-error (format "Expected 0 arguments but got ~a." (length ctor-args))
+                                     (current-call-line)))
+                self)
+              (symbol->string (syntax-e #'class-name))
+              lookup-local-method
+              superclass-value))))]))
 
 (define (lox-runtime-error message line)
   (begin
@@ -318,6 +329,13 @@
 (define-syntax (lox-this stx)
   (syntax-parse stx
     [_ #'this-param]))
+
+(define-syntax (lox-super stx)
+  (syntax-parse stx
+    [(_ _ method:str)
+     (with-syntax ([method-sym (string->symbol (syntax-e #'method))]
+                   [line (or (syntax-line #'method) (syntax-line stx) 0)])
+       #'(lox-super-impl super-param this-param 'method-sym line))]))
 
 (define-syntax (lox-get stx)
   (syntax-parse stx
@@ -393,6 +411,7 @@
          lox-literal
          lox-variable
          lox-this
+         lox-super
          lox-if
          lox-while
          lox-call
