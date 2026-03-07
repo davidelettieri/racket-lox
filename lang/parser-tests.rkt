@@ -132,9 +132,7 @@
     (parse-and-assert "a.b = c;" '((lox-set (lox-variable a) "b" (lox-variable c)))))
 
   (test-case "super method"
-    (parse-and-assert "super.method();"
-                      '((lox-call (lox-super (token SUPER "super" #f)
-                                             (token IDENTIFIER "method" #f))))))
+    (parse-and-assert "super.method();" '((lox-call (lox-super "super" "method")))))
 
   (test-case "this"
     (parse-and-assert "this;" '(lox-this)))
