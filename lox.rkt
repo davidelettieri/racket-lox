@@ -110,7 +110,6 @@
   (lambda (stx) (raise-syntax-error #f "super used outside of class" stx)))
 
 (define current-call-line (make-parameter 0))
-(define lox-get-method-msg '__lox-get-method__)
 
 (define-syntax (lox-return stx)
   (syntax-parse stx
@@ -183,7 +182,8 @@
     [(boolean? value) (print-bool value)]
     [(eqv? value 'nil) (displayln "nil")]
     [(lox-class-constructor? value) (displayln (lox-class-constructor-name value))]
-    [(lox-class-instance? value) (displayln (format "~a instance" (lox-class-instance-name value)))]
+    [(lox-class-instance? value)
+     (displayln (format "~a instance" (lox-class-constructor-name (lox-class-instance-class value))))]
     [(procedure? value)
      (let ([function-name (object-name value)])
        (if (eqv? function-name 'clock)
@@ -221,7 +221,7 @@
 (struct lox-class-constructor (base name lookup superclass)
   #:property prop:procedure
   (struct-field-index base))
-(struct lox-class-instance (base name fields) #:property prop:procedure (struct-field-index base))
+(struct lox-class-instance (class fields))
 
 (define (lox-class-find-method klass prop receiver)
   (cond
@@ -245,7 +245,7 @@
      (cond
        [(hash-has-key? fields method-sym) (hash-ref fields method-sym)]
        [else
-        (define maybe-method (o lox-get-method-msg method-sym))
+        (define maybe-method (lox-class-find-method (lox-class-instance-class o) method-sym o))
         (if maybe-method
             maybe-method
             (lox-runtime-error (format "Undefined property '~a'." method-sym) line))])]
@@ -262,16 +262,7 @@
   (letrec ([klass (lox-class-constructor
                    (lambda ctor-args
                      (define fields (make-hash))
-                     (define self #f)
-                     (set! self
-                           (lox-class-instance (lambda (msg . args)
-                                                 (cond
-                                                   [(eq? msg lox-get-method-msg)
-                                                    (define prop (car args))
-                                                    (lox-class-find-method klass prop self)]
-                                                   [else #f]))
-                                               class-name-str
-                                               fields))
+                     (define self (lox-class-instance klass fields))
                      (define maybe-init (lox-class-find-method klass 'init self))
                      (when maybe-init
                        (lox-call-impl maybe-init ctor-args (current-call-line)))
