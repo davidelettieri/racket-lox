@@ -321,10 +321,6 @@
 
 (define-syntax (lox-get stx)
   (syntax-parse stx
-    [(_ obj method:id)
-     (with-syntax ([method-sym (syntax-e #'method)]
-                   [line (or (syntax-line #'method) (syntax-line stx) 0)])
-       #'(lox-get-impl obj 'method-sym line))]
     [(_ obj method:str)
      (with-syntax ([method-sym (string->symbol (syntax-e #'method))]
                    [line (or (syntax-line #'method) (syntax-line stx) 0)])
@@ -332,10 +328,6 @@
 
 (define-syntax (lox-set stx)
   (syntax-parse stx
-    [(_ obj method:id value:expr)
-     (with-syntax ([method-sym (syntax-e #'method)]
-                   [line (or (syntax-line #'method) (syntax-line stx) 0)])
-       #'(lox-set-impl obj 'method-sym value line))]
     [(_ obj method:str value:expr)
      (with-syntax ([method-sym (string->symbol (syntax-e #'method))]
                    [line (or (syntax-line #'method) (syntax-line stx) 0)])
