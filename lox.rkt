@@ -14,7 +14,7 @@
       (syntax-parse stmt
         #:datum-literals (lox-var-declaration)
         [(lox-var-declaration name:id val:expr)
-         (define sym (syntax-e #'name))
+         (define sym (syntax->datum #'name))
          (if (set-member? defined-vars sym)
              #'(lox-assign name val)
              (begin
@@ -175,7 +175,7 @@
              (set! name c)
              c)
          (with-syntax ([line (or (syntax-line #'name) (syntax-line stx) 0)]
-                       [str-id (symbol->string (syntax-e #'name))])
+                       [str-id (symbol->string (syntax->datum #'name))])
            #'(lox-runtime-error (format "Undefined variable '~a'." str-id) line)))]))
 
 (define (lox-print value)
@@ -227,9 +227,7 @@
   (cond
     [(not klass) #f]
     [else
-     (define maybe-local ((lox-class-constructor-lookup klass) prop receiver))
-     (if maybe-local
-         maybe-local
+     (or ((lox-class-constructor-lookup klass) prop receiver)
          (lox-class-find-method (lox-class-constructor-superclass klass) prop receiver))]))
 
 (define (lox-super-impl superclass receiver method-sym line)
@@ -291,7 +289,7 @@
   (syntax-parse stx
     #:datum-literals (lox-function)
     [(_ class-name:id superclass ((lox-function m-name:id (m-arg:id ...) (m-body:expr ...)) ...))
-     #:do [(define has-super? (not (eq? (syntax-e #'superclass) #f)))]
+     #:do [(define has-super? (not (eq? (syntax->datum #'superclass) #f)))]
      (with-syntax ([class-line (or (syntax-line #'class-name) (syntax-line stx) 0)]
                    [superclass-expr (if has-super? #'superclass #'#f)])
        #'(define class-name
@@ -314,7 +312,7 @@
                        (if (eq? 'm-name 'init) this result)))
                    'm-name)] ...
                  [else #f]))
-             (make-lox-class-constructor (symbol->string (syntax-e #'class-name))
+             (make-lox-class-constructor (symbol->string (syntax->datum #'class-name))
                                          superclass-value
                                          lookup-local-method))))]))
 
@@ -335,21 +333,21 @@
 (define-syntax (lox-super stx)
   (syntax-parse stx
     [(_ method:str)
-     (with-syntax ([method-sym (string->symbol (syntax-e #'method))]
+     (with-syntax ([method-sym (string->symbol (syntax->datum #'method))]
                    [line (or (syntax-line #'method) (syntax-line stx) 0)])
        #'(lox-super-impl super-param this-param 'method-sym line))]))
 
 (define-syntax (lox-get stx)
   (syntax-parse stx
     [(_ obj method:str)
-     (with-syntax ([method-sym (string->symbol (syntax-e #'method))]
+     (with-syntax ([method-sym (string->symbol (syntax->datum #'method))]
                    [line (or (syntax-line #'method) (syntax-line stx) 0)])
        #'(lox-get-impl obj 'method-sym line))]))
 
 (define-syntax (lox-set stx)
   (syntax-parse stx
     [(_ obj method:str value:expr)
-     (with-syntax ([method-sym (string->symbol (syntax-e #'method))]
+     (with-syntax ([method-sym (string->symbol (syntax->datum #'method))]
                    [line (or (syntax-line #'method) (syntax-line stx) 0)])
        #'(lox-set-impl obj 'method-sym value line))]))
 
@@ -395,7 +393,7 @@
   (syntax-parse stx
     [(_ . id:id)
      (with-syntax ([line (or (syntax-line #'id) (syntax-line stx) 0)]
-                   [str-id (symbol->string (syntax-e #'id))])
+                   [str-id (symbol->string (syntax->datum #'id))])
        #'(lox-runtime-error (format "Undefined variable '~a'." str-id) line))]))
 
 (provide lox-unary
