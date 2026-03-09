@@ -148,8 +148,7 @@
 
 (define-syntax-rule (lox-binary-number-op name op)
   (define-syntax (name stx)
-    (with-syntax ([line (syntax-line stx)]
-                  [impl-id (format-id #'name "~a-impl" #'name)])
+    (with-syntax ([line (syntax-line stx)])
       (syntax-case stx ()
         [(_ a b)
          (syntax (let ([av a]

@@ -5,19 +5,16 @@
          "parser.rkt")
 
 (define (read in)
-  (define tokens (scan-tokens in))
-  (define ast (parse tokens))
-  `(module anonymous-module racket-lox
-     (lox-module-wrapper ,@ast)))
+  (read-syntax #f in))
 
 (define (read-syntax src in)
   (define source (or src (object-name in)))
   (define tokens (scan-tokens in))
   (define ast (parse tokens))
-  (define module-stx
+  (define module-datum
     `(module anonymous-module racket-lox
        (lox-module-wrapper ,@ast)))
-  module-stx)
+  (datum->syntax #f module-datum (list source #f #f #f #f)))
 
 (define (get-info in mod line col pos)
   (lambda (key default)

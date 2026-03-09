@@ -152,7 +152,7 @@
     (raise (exn:fail:scanner "Unterminated string." (current-continuation-marks) line)))
   (read-char input-port)
   (define value (list->string (reverse chars)))
-  (token 'STRING value #f (make-src input-port line col pos (+ 2 (string-length value)))))
+  (token 'STRING value value (make-src input-port line col pos (+ 2 (string-length value)))))
 
 (define (handle-slash input-port line col pos)
   (if (match input-port
