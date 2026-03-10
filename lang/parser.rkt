@@ -176,7 +176,7 @@
     (define keyword (previous))
     (define value
       (if (check 'SEMICOLON)
-          (datum->syntax #f 'lox-nil)
+          (datum->syntax #f 'lox-nil (token->src keyword))
           (expression)))
     (consume 'SEMICOLON "Expect ';' after return value.")
     (datum->syntax #f `(lox-return ,value) (token->src keyword)))
@@ -305,7 +305,7 @@
                                      (set! had-error? #t)
                                      (synchronize)
                                      (displayln (exn-message e) (current-error-port))
-                                     #'null)])
+                                     '())])
       (declaration)))
   (define statements
     (if (is-at-end?)
