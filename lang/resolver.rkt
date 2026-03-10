@@ -88,14 +88,8 @@
 
   (define (resolve-stmt stmt)
     (syntax-parse stmt
-      #:datum-literals (lox-block lox-var-declaration
-                                  lox-function
-                                  lox-class
-                                  lox-if
-                                  lox-while
-                                  lox-print
-                                  lox-return
-                                  lox-expression-statement)
+      #:datum-literals
+      (lox-block lox-var-declaration lox-function lox-class lox-if lox-while lox-print lox-return)
       [(lox-block stmt ...)
        (begin-scope)
        (for ([s (in-list (attribute stmt))])
@@ -155,7 +149,6 @@
       [(lox-while cond body)
        (resolve-expr #'cond)
        (resolve-stmt #'body)]
-      [(lox-expression-statement expr) (resolve-expr #'expr)]
       ;; If it doesn't match a statement, treat as expression (expression statement)
       [expr (resolve-expr #'expr)]))
 

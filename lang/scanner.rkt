@@ -46,12 +46,12 @@
         'WHILE))
 
 (define (scan-tokens input-port)
-  (define _hadError #f)
+  (define had-error? #f)
   (port-count-lines! input-port)
   (define (safe-scan-token)
     (let loop ()
       (with-handlers ([exn:fail:scanner? (lambda (e)
-                                           (set! _hadError #t)
+                                           (set! had-error? #t)
                                            (displayln (format "[line ~a] Error: ~a"
                                                               (exn:fail:scanner-line e)
                                                               (exn-message e))
@@ -62,7 +62,7 @@
     (for/list ([token (in-producer safe-scan-token)]
                #:final (eqv? 'EOF (token-type token)))
       token))
-  (scanner-output tokens _hadError))
+  (scanner-output tokens had-error?))
 
 ;; helper to build srcloc with a real source
 (define (make-src ip line col pos span)

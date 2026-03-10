@@ -25,7 +25,7 @@
                (advance)
                (loop)])))))
   (define _tokens (list->vector (scanner-output-tokens scanner-result)))
-  (define _hadError (scanner-output-had-error scanner-result))
+  (define had-error? (scanner-output-had-error scanner-result))
   (define _current 0)
   (define (advance)
     (when (not (is-at-end?))
@@ -134,8 +134,7 @@
       (if (or (check 'RIGHT_BRACE) (is-at-end?))
           '()
           (for/list ([decl (in-producer protected-declaration)]
-                     #:final (or (check 'RIGHT_BRACE) (is-at-end?))
-                     #:when (lambda (el) (not (null? el))))
+                     #:final (or (check 'RIGHT_BRACE) (is-at-end?)))
             decl)))
     (consume 'RIGHT_BRACE "Expect '}' after block.")
     statements)
@@ -303,7 +302,7 @@
       [else (expression-statement)]))
   (define (protected-declaration)
     (with-handlers ([exn:fail:lox? (lambda (e)
-                                     (set! _hadError #t)
+                                     (set! had-error? #t)
                                      (synchronize)
                                      (displayln (exn-message e) (current-error-port))
                                      #'null)])
@@ -312,10 +311,9 @@
     (if (is-at-end?)
         null
         (for/list ([decl (in-producer protected-declaration)]
-                   #:final (is-at-end?)
-                   #:when (lambda (el) (not (null? el))))
+                   #:final (is-at-end?))
           decl)))
-  (when _hadError
+  (when had-error?
     (exit 65))
   statements)
 (provide parse)
