@@ -108,7 +108,8 @@
        (set! current-class 'class)
        (declare #'name)
        (define-var #'name)
-       (unless (equal? (syntax->datum #'super) #f)
+       (define has-superclass? (syntax->datum #'super))
+       (when has-superclass?
          (set! current-class 'subclass)
          (when (eq? (syntax->datum #'name) (syntax->datum #'super))
            (resolve-error #'super "A class can't inherit from itself."))
@@ -129,7 +130,7 @@
                (resolve-function (attribute mparam) #'mbody declaration)]))])
 
        (end-scope)
-       (unless (equal? (syntax->datum #'super) #f)
+       (when has-superclass?
          (end-scope))
        (set! current-class enclosing-class)]
       [(lox-if cond then)

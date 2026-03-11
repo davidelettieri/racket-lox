@@ -304,8 +304,7 @@
     (with-handlers ([exn:fail:lox? (lambda (e)
                                      (set! had-error? #t)
                                      (synchronize)
-                                     (displayln (exn-message e) (current-error-port))
-                                     '())])
+                                     (displayln (exn-message e) (current-error-port)))])
       (declaration)))
   (define statements
     (if (is-at-end?)
