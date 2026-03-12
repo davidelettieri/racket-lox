@@ -39,7 +39,9 @@
       [(_ a) (syntax (lox-negate-impl a line))])))
 (define (lox-negate-impl a line)
   (if (number? a)
-      (- a)
+      (if (zero? a)
+          (if (and (real? a) (negative? a)) 0.0 -0.0)
+          (- a))
       (lox-runtime-error "Operand must be a number." line)))
 
 (define-syntax (lox-binary stx)
@@ -98,6 +100,7 @@
   (cond
     [(and (real? a) (nan? a)) #f]
     [(and (real? b) (nan? b)) #f]
+    [(and (number? a) (number? b)) (= a b)]
     [else (eqv? a b)]))
 
 (define-syntax-parameter return-param
@@ -157,7 +160,16 @@
                        (op av bv)
                        (lox-runtime-error "Operands must be numbers." line))))]))))
 
-(lox-binary-number-op lox-divide /)
+(define-syntax (lox-divide stx)
+  (with-syntax ([line (syntax-line stx)])
+    (syntax-case stx ()
+      [(_ a b)
+       (syntax (let ([av a]
+                     [bv b])
+                 (if (and (number? av) (number? bv))
+                     (/ (exact->inexact av) (exact->inexact bv))
+                     (lox-runtime-error "Operands must be numbers." line))))])))
+
 (lox-binary-number-op lox-multiply *)
 (lox-binary-number-op lox-subtract -)
 (lox-binary-number-op lox-less <)
@@ -180,10 +192,19 @@
                        [str-id (symbol->string (syntax->datum #'name))])
            #'(lox-runtime-error (format "Undefined variable '~a'." str-id) line)))]))
 
+(define (lox-number->string value)
+  (cond
+    ;; Preserve negative zero so `print -0;` matches Crafting Interpreters output.
+    [(and (real? value) (inexact? value) (eqv? value -0.0)) "-0"]
+    ;; Lox prints whole-valued numbers without a trailing ".0".
+    [(and (real? value) (integer? value)) (number->string (inexact->exact value))]
+    [else (number->string value)]))
+
 (define (lox-print value)
   (cond
     [(boolean? value) (print-bool value)]
     [(eqv? value 'nil) (displayln "nil")]
+    [(number? value) (displayln (lox-number->string value))]
     [(lox-class-constructor? value) (displayln (lox-class-constructor-name value))]
     [(lox-class-instance? value)
      (displayln (format "~a instance" (lox-class-constructor-name (lox-class-instance-class value))))]

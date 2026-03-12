@@ -5,9 +5,9 @@ Here my **failed** attempt at implementing Lox language from crafting interprete
 
 # racket numbers note
 
-I'm not able to control printing for racket numbers so tests for numbers value are changed with respect to crafting interpreters implementation.
+Scanner literals preserve exactness based on source representation: integer literals become exact integers while decimals become inexact reals (`flonums`).
 
-I think the right racket representation for numbers is `flonums`, I'm forcing the number to be a `flonum` by adding a `#i` at the beginning of the string value before doing the conversion to number.
+Printing follows Crafting Interpreters behavior: whole-valued numbers are rendered without a trailing `.0` (for example `1` instead of `1.0`), while fractional values keep their decimal part.
 
 > Inexact real numbers are implemented as double-precision IEEE floating-point numbers, also known as flonums
 

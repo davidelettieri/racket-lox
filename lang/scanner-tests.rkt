@@ -92,13 +92,13 @@
   (test-case "lexeme and literal for integer number literal"
     (define token (first (scanner-output-tokens (scan-tokens (open-input-string "123")))))
     (check-equal? (token-lexeme token) "123")
-    (check-true (flonum? (token-literal token)))
-    (check-equal? (token-literal token) 123.0))
+    (check-true (exact-integer? (token-literal token)))
+    (check-equal? (token-literal token) 123))
 
   (test-case "lexeme and literal for floating-point number literal"
     (define token (first (scanner-output-tokens (scan-tokens (open-input-string "123.45")))))
     (check-equal? (token-lexeme token) "123.45")
-    (check-true (flonum? (token-literal token)))
+    (check-true (inexact? (token-literal token)))
     (check-equal? (token-literal token) 123.45))
 
   (test-case "scan all keyword tokens"

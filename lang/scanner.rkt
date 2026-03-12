@@ -140,10 +140,8 @@
     (advance)
     (while (numeric? (peek-char input-port)) (advance)))
   (define value (list->string (reverse chars)))
-  (token 'NUMBER
-         value
-         (string->number (string-append "#i" value))
-         (make-src input-port line col pos (string-length value))))
+  (define literal (string->number value))
+  (token 'NUMBER value literal (make-src input-port line col pos (string-length value))))
 
 (define (string-token input-port line col pos)
   (define chars '())
