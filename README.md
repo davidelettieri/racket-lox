@@ -1,17 +1,11 @@
 racket-lox
 ==========
 
-Here my **failed** attempt at implementing Lox language from crafting interpreters book as a racket language module.
+This repo contains a "compliant" implementation of the Lox language from the [Crafting Interpreters book](https://craftinginterpreters.com/). By compliant I mean the implementation is passing all the tests up to the `chap13_inheritance` suite which is the last one of the Java part of the book.
 
-# racket numbers note
+The language can be used in DrRacket using `#lang racket-lox` at the top of the file. In order to pass the Lox tests, on syntax error, parse error, etc we need to exit the application with some specific error messages and error codes. This makes it incompatible with the default syntax error highlighting supported by DrRacket. I plan to have a "dialect" which supports that but it is not there yet.
 
-Scanner literals preserve exactness based on source representation: integer literals become exact integers while decimals become inexact reals (`flonums`).
-
-Printing follows Crafting Interpreters behavior: whole-valued numbers are rendered without a trailing `.0` (for example `1` instead of `1.0`), while fractional values keep their decimal part.
-
-> Inexact real numbers are implemented as double-precision IEEE floating-point numbers, also known as flonums
-
-[source](https://docs.racket-lang.org/reference/numbers.html#%28tech._flonum%29)
+How to install the package: raco pkg install
 
 How to run tests: raco test -x -p racket-lox
 
@@ -24,3 +18,11 @@ By default integration tests use Podman when available.
 How to force Docker instead of Podman: CONTAINER_CLI=docker ./run-tests.sh
 
 How to update the package in the system: raco setup racket-lox
+
+Sample code
+
+```
+#lang racket-lox
+
+print "Hello world!";
+```
