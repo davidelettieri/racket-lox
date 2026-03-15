@@ -36,6 +36,7 @@
   (with-syntax ([line (syntax-line stx)])
     (syntax-case stx ()
       [(_ a) (syntax (lox-negate-impl a line))])))
+
 (define (lox-negate-impl a line)
   (if (number? a)
       (if (zero? a)
@@ -44,7 +45,7 @@
       (lox-runtime-error "Operand must be a number." line)))
 
 (define-syntax (lox-binary stx)
-  (with-syntax ([line (or (syntax-line stx) 0)])
+  (with-syntax ([line (syntax-line stx)])
     (syntax-parse stx
       #:datum-literals
       (PLUS MINUS GREATER GREATER_EQUAL LESS LESS_EQUAL SLASH STAR BANG_EQUAL EQUAL_EQUAL AND OR)
