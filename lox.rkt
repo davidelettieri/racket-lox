@@ -39,7 +39,9 @@
       [(_ a) (syntax (lox-negate-impl a line))])))
 (define (lox-negate-impl a line)
   (if (number? a)
-      (- a)
+      (if (zero? a)
+          (if (and (real? a) (negative? a)) 0.0 -0.0)
+          (- a))
       (lox-runtime-error "Operand must be a number." line)))
 
 (define-syntax (lox-binary stx)
@@ -98,6 +100,7 @@
   (cond
     [(and (real? a) (nan? a)) #f]
     [(and (real? b) (nan? b)) #f]
+    [(and (number? a) (number? b)) (= a b)]
     [else (eqv? a b)]))
 
 (define-syntax-parameter return-param
@@ -110,19 +113,22 @@
   (lambda (stx) (raise-syntax-error #f "super used outside of class" stx)))
 
 (define current-call-line (make-parameter 0))
-(define lox-get-method-msg '__lox-get-method__)
 
 (define-syntax (lox-return stx)
   (syntax-parse stx
     [(_ val) #'(return-param val)]))
 
+(define-syntax-rule (lox-run-callable-body ((param binding) ...) stmt ...)
+  (let/ec k
+    (syntax-parameterize ([return-param (make-rename-transformer #'k)]
+                          [param binding] ...)
+      (lox-block stmt ...))))
+
 (define-syntax (lox-function stx)
   (syntax-parse stx
     [(_ name:id (arg:id ...) (stmt ...))
      #'(define (name arg ...)
-         (let/ec k
-           (syntax-parameterize ([return-param (make-rename-transformer #'k)])
-             (lox-block stmt ...))))]))
+         (lox-run-callable-body () stmt ...))]))
 
 (define-syntax (lox-add stx)
   (with-syntax ([line (syntax-line stx)])
@@ -145,8 +151,7 @@
 
 (define-syntax-rule (lox-binary-number-op name op)
   (define-syntax (name stx)
-    (with-syntax ([line (syntax-line stx)]
-                  [impl-id (format-id #'name "~a-impl" #'name)])
+    (with-syntax ([line (syntax-line stx)])
       (syntax-case stx ()
         [(_ a b)
          (syntax (let ([av a]
@@ -155,7 +160,16 @@
                        (op av bv)
                        (lox-runtime-error "Operands must be numbers." line))))]))))
 
-(lox-binary-number-op lox-divide /)
+(define-syntax (lox-divide stx)
+  (with-syntax ([line (syntax-line stx)])
+    (syntax-case stx ()
+      [(_ a b)
+       (syntax (let ([av a]
+                     [bv b])
+                 (if (and (number? av) (number? bv))
+                     (/ (exact->inexact av) (exact->inexact bv))
+                     (lox-runtime-error "Operands must be numbers." line))))])))
+
 (lox-binary-number-op lox-multiply *)
 (lox-binary-number-op lox-subtract -)
 (lox-binary-number-op lox-less <)
@@ -178,12 +192,22 @@
                        [str-id (symbol->string (syntax->datum #'name))])
            #'(lox-runtime-error (format "Undefined variable '~a'." str-id) line)))]))
 
+(define (lox-number->string value)
+  (cond
+    ;; Preserve negative zero so `print -0;` matches Crafting Interpreters output.
+    [(and (real? value) (inexact? value) (eqv? value -0.0)) "-0"]
+    ;; Lox prints whole-valued numbers without a trailing ".0".
+    [(and (real? value) (integer? value)) (number->string (inexact->exact value))]
+    [else (number->string value)]))
+
 (define (lox-print value)
   (cond
     [(boolean? value) (print-bool value)]
     [(eqv? value 'nil) (displayln "nil")]
+    [(number? value) (displayln (lox-number->string value))]
     [(lox-class-constructor? value) (displayln (lox-class-constructor-name value))]
-    [(lox-class-instance? value) (displayln (format "~a instance" (lox-class-instance-name value)))]
+    [(lox-class-instance? value)
+     (displayln (format "~a instance" (lox-class-constructor-name (lox-class-instance-class value))))]
     [(procedure? value)
      (let ([function-name (object-name value)])
        (if (eqv? function-name 'clock)
@@ -218,21 +242,28 @@
      (with-syntax ([line (syntax-line stx)])
        #'(lox-call-impl callee (list arg0 ...) line))]))
 
-(struct lox-class-constructor (base name lookup superclass)
+(struct lox-class-constructor (base name method-table superclass)
   #:property prop:procedure
   (struct-field-index base))
-(struct lox-class-instance (base name fields) #:property prop:procedure (struct-field-index base))
+(struct lox-class-instance (class fields))
 
-(define (lox-class-find-method klass prop receiver)
+(define (lox-method-table-ref method-table prop)
+  (hash-ref method-table prop #f))
+
+(define (lox-class-find-method-factory klass prop)
   (cond
     [(not klass) #f]
     [else
-     (or ((lox-class-constructor-lookup klass) prop receiver)
-         (lox-class-find-method (lox-class-constructor-superclass klass) prop receiver))]))
+     (or (lox-method-table-ref (lox-class-constructor-method-table klass) prop)
+         (lox-class-find-method-factory (lox-class-constructor-superclass klass) prop))]))
+
+(define (lox-class-bind-method klass prop receiver)
+  (define maybe-factory (lox-class-find-method-factory klass prop))
+  (and maybe-factory (maybe-factory receiver)))
 
 (define (lox-super-impl superclass receiver method-sym line)
   (if (lox-class-constructor? superclass)
-      (let ([method (lox-class-find-method superclass method-sym receiver)])
+      (let ([method (lox-class-bind-method superclass method-sym receiver)])
         (if method
             method
             (lox-runtime-error (format "Undefined property '~a'." method-sym) line)))
@@ -241,14 +272,14 @@
 (define (lox-get-impl o method-sym line)
   (cond
     [(lox-class-instance? o)
-     (define fields (lox-class-instance-fields o))
-     (cond
-       [(hash-has-key? fields method-sym) (hash-ref fields method-sym)]
-       [else
-        (define maybe-method (o lox-get-method-msg method-sym))
-        (if maybe-method
-            maybe-method
-            (lox-runtime-error (format "Undefined property '~a'." method-sym) line))])]
+     (hash-ref (lox-class-instance-fields o)
+               method-sym
+               (lambda ()
+                 (define maybe-method
+                   (lox-class-bind-method (lox-class-instance-class o) method-sym o))
+                 (if maybe-method
+                     maybe-method
+                     (lox-runtime-error (format "Undefined property '~a'." method-sym) line))))]
     [else (lox-runtime-error "Only instances have properties." line)]))
 
 (define (lox-set-impl o method-sym value line)
@@ -258,21 +289,12 @@
      value]
     [else (lox-runtime-error "Only instances have fields." line)]))
 
-(define (make-lox-class-constructor class-name-str superclass-value lookup-local-method)
+(define (make-lox-class-constructor class-name-str superclass-value method-table)
   (letrec ([klass (lox-class-constructor
                    (lambda ctor-args
                      (define fields (make-hash))
-                     (define self #f)
-                     (set! self
-                           (lox-class-instance (lambda (msg . args)
-                                                 (cond
-                                                   [(eq? msg lox-get-method-msg)
-                                                    (define prop (car args))
-                                                    (lox-class-find-method klass prop self)]
-                                                   [else #f]))
-                                               class-name-str
-                                               fields))
-                     (define maybe-init (lox-class-find-method klass 'init self))
+                     (define self (lox-class-instance klass fields))
+                     (define maybe-init (lox-class-bind-method klass 'init self))
                      (when maybe-init
                        (lox-call-impl maybe-init ctor-args (current-call-line)))
                      (when (and (not maybe-init) (not (null? ctor-args)))
@@ -281,40 +303,45 @@
                                           (current-call-line)))
                      self)
                    class-name-str
-                   lookup-local-method
+                   method-table
                    superclass-value)])
     klass))
+
+(define (lox-validate-superclass superclass-value line)
+  (when (and superclass-value (not (lox-class-constructor? superclass-value)))
+    (lox-runtime-error "Superclass must be a class." line)))
+
+(define-syntax-rule (lox-make-bound-method m-name receiver superclass-value (m-arg ...) m-body ...)
+  (procedure-rename (lambda (m-arg ...)
+                      (let ([this receiver]
+                            [super superclass-value])
+                        (define result
+                          (lox-run-callable-body ((this-param (make-rename-transformer #'this))
+                                                  (super-param (make-rename-transformer #'super)))
+                                                 m-body ...))
+                        (if (eq? 'm-name 'init) this result)))
+                    'm-name))
+
+(define-syntax-rule (lox-make-method-factory m-name superclass-value (m-arg ...) m-body ...)
+  (lambda (receiver) (lox-make-bound-method m-name receiver superclass-value (m-arg ...) m-body ...)))
+
+(define-syntax-rule (lox-make-method-entry m-name superclass-value (m-arg ...) m-body ...)
+  (cons 'm-name (lox-make-method-factory m-name superclass-value (m-arg ...) m-body ...)))
 
 (define-syntax (lox-class stx)
   (syntax-parse stx
     #:datum-literals (lox-function)
-    [(_ class-name:id superclass ((lox-function m-name:id (m-arg:id ...) (m-body:expr ...)) ...))
-     #:do [(define has-super? (not (eq? (syntax->datum #'superclass) #f)))]
-     (with-syntax ([class-line (or (syntax-line #'class-name) (syntax-line stx) 0)]
-                   [superclass-expr (if has-super? #'superclass #'#f)])
+    [(_ class-name:id superclass:expr ((lox-function m-name:id (m-arg:id ...) (m-body:expr ...)) ...))
+     (with-syntax ([class-line (or (syntax-line #'class-name) (syntax-line stx) 0)])
        #'(define class-name
-           (let ([superclass-value superclass-expr])
-             (when (and superclass-value (not (lox-class-constructor? superclass-value)))
-               (lox-runtime-error "Superclass must be a class." class-line))
-             (define (lookup-local-method prop receiver)
-               (case prop
-                 [(m-name)
-                  (procedure-rename
-                   (lambda (m-arg ...)
-                     (let ([this receiver]
-                           [super superclass-value])
-                       (define result
-                         (let/ec k
-                           (syntax-parameterize ([return-param (make-rename-transformer #'k)]
-                                                 [this-param (make-rename-transformer #'this)]
-                                                 [super-param (make-rename-transformer #'super)])
-                             (lox-block m-body ...))))
-                       (if (eq? 'm-name 'init) this result)))
-                   'm-name)] ...
-                 [else #f]))
-             (make-lox-class-constructor (symbol->string (syntax->datum #'class-name))
+           (let ([superclass-value superclass])
+             (lox-validate-superclass superclass-value class-line)
+             (define method-table
+               (make-hasheq
+                (list (lox-make-method-entry m-name superclass-value (m-arg ...) m-body ...) ...)))
+             (make-lox-class-constructor (symbol->string 'class-name)
                                          superclass-value
-                                         lookup-local-method))))]))
+                                         method-table))))]))
 
 (define (lox-runtime-error message line)
   (begin
@@ -368,10 +395,7 @@
             #'(let ([name val]) body))]
          [(lox-function name (arg ...) (fstmt ...))
           (with-syntax ([body (expand-block-stmts #'rest)])
-            #'(letrec ([name (lambda (arg ...)
-                               (let/ec k
-                                 (syntax-parameterize ([return-param (make-rename-transformer #'k)])
-                                   (lox-block fstmt ...))))])
+            #'(letrec ([name (lambda (arg ...) (lox-run-callable-body () fstmt ...))])
                 body))]
          [other
           (with-syntax ([body (expand-block-stmts #'rest)])

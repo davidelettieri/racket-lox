@@ -46,12 +46,12 @@
         'WHILE))
 
 (define (scan-tokens input-port)
-  (define _hadError #f)
+  (define had-error? #f)
   (port-count-lines! input-port)
   (define (safe-scan-token)
     (let loop ()
       (with-handlers ([exn:fail:scanner? (lambda (e)
-                                           (set! _hadError #t)
+                                           (set! had-error? #t)
                                            (displayln (format "[line ~a] Error: ~a"
                                                               (exn:fail:scanner-line e)
                                                               (exn-message e))
@@ -62,7 +62,7 @@
     (for/list ([token (in-producer safe-scan-token)]
                #:final (eqv? 'EOF (token-type token)))
       token))
-  (scanner-output tokens _hadError))
+  (scanner-output tokens had-error?))
 
 ;; helper to build srcloc with a real source
 (define (make-src ip line col pos span)
@@ -140,10 +140,8 @@
     (advance)
     (while (numeric? (peek-char input-port)) (advance)))
   (define value (list->string (reverse chars)))
-  (token 'NUMBER
-         value
-         (string->number (string-append "#i" value))
-         (make-src input-port line col pos (string-length value))))
+  (define literal (string->number value))
+  (token 'NUMBER value literal (make-src input-port line col pos (string-length value))))
 
 (define (string-token input-port line col pos)
   (define chars '())
@@ -152,7 +150,7 @@
     (raise (exn:fail:scanner "Unterminated string." (current-continuation-marks) line)))
   (read-char input-port)
   (define value (list->string (reverse chars)))
-  (token 'STRING value #f (make-src input-port line col pos (+ 2 (string-length value)))))
+  (token 'STRING value value (make-src input-port line col pos (+ 2 (string-length value)))))
 
 (define (handle-slash input-port line col pos)
   (if (match input-port

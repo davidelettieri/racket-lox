@@ -2,7 +2,7 @@
 (require racket/match
          racket/port
          "scanner.rkt")
-
+; Fully AI generated
 (provide color-lexer)
 
 (define (color-lexer in offset mode)

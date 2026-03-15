@@ -88,14 +88,8 @@
 
   (define (resolve-stmt stmt)
     (syntax-parse stmt
-      #:datum-literals (lox-block lox-var-declaration
-                                  lox-function
-                                  lox-class
-                                  lox-if
-                                  lox-while
-                                  lox-print
-                                  lox-return
-                                  lox-expression-statement)
+      #:datum-literals
+      (lox-block lox-var-declaration lox-function lox-class lox-if lox-while lox-print lox-return)
       [(lox-block stmt ...)
        (begin-scope)
        (for ([s (in-list (attribute stmt))])
@@ -114,7 +108,8 @@
        (set! current-class 'class)
        (declare #'name)
        (define-var #'name)
-       (unless (equal? (syntax->datum #'super) #f)
+       (define has-superclass? (syntax->datum #'super))
+       (when has-superclass?
          (set! current-class 'subclass)
          (when (eq? (syntax->datum #'name) (syntax->datum #'super))
            (resolve-error #'super "A class can't inherit from itself."))
@@ -135,7 +130,7 @@
                (resolve-function (attribute mparam) #'mbody declaration)]))])
 
        (end-scope)
-       (unless (equal? (syntax->datum #'super) #f)
+       (when has-superclass?
          (end-scope))
        (set! current-class enclosing-class)]
       [(lox-if cond then)
@@ -155,7 +150,6 @@
       [(lox-while cond body)
        (resolve-expr #'cond)
        (resolve-stmt #'body)]
-      [(lox-expression-statement expr) (resolve-expr #'expr)]
       ;; If it doesn't match a statement, treat as expression (expression statement)
       [expr (resolve-expr #'expr)]))
 

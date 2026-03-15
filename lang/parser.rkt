@@ -2,8 +2,7 @@
 
 (require "helpers.rkt"
          "scanner.rkt")
-(require syntax/parse
-         racket/trace)
+(require syntax/parse)
 
 (struct exn:fail:lox exn:fail (line) #:transparent)
 
@@ -26,7 +25,7 @@
                (advance)
                (loop)])))))
   (define _tokens (list->vector (scanner-output-tokens scanner-result)))
-  (define _hadError (scanner-output-had-error scanner-result))
+  (define had-error? (scanner-output-had-error scanner-result))
   (define _current 0)
   (define (advance)
     (when (not (is-at-end?))
@@ -135,8 +134,7 @@
       (if (or (check 'RIGHT_BRACE) (is-at-end?))
           '()
           (for/list ([decl (in-producer protected-declaration)]
-                     #:final (or (check 'RIGHT_BRACE) (is-at-end?))
-                     #:when (lambda (el) (not (null? el))))
+                     #:final (or (check 'RIGHT_BRACE) (is-at-end?)))
             decl)))
     (consume 'RIGHT_BRACE "Expect '}' after block.")
     statements)
@@ -178,7 +176,7 @@
     (define keyword (previous))
     (define value
       (if (check 'SEMICOLON)
-          (datum->syntax #f 'lox-nil)
+          (datum->syntax #f 'lox-nil (token->src keyword))
           (expression)))
     (consume 'SEMICOLON "Expect ';' after return value.")
     (datum->syntax #f `(lox-return ,value) (token->src keyword)))
@@ -302,40 +300,19 @@
       [(match 'WHILE) (while-statement)]
       [(match 'LEFT_BRACE) (block-statement)]
       [else (expression-statement)]))
-  ; (trace block
-  ;        declaration
-  ;        block-statement
-  ;        statement
-  ;        for-statement
-  ;        var-declaration
-  ;        assignment
-  ;        print-statement
-  ;        expression
-  ;        or-syntax
-  ;        and-syntax
-  ;        factor
-  ;        unary
-  ;        term
-  ;        comparison
-  ;        equality
-  ;        call
-  ;        primary
-  ;        finish-call)
   (define (protected-declaration)
     (with-handlers ([exn:fail:lox? (lambda (e)
-                                     (set! _hadError #t)
+                                     (set! had-error? #t)
                                      (synchronize)
-                                     (displayln (exn-message e) (current-error-port))
-                                     #'null)])
+                                     (displayln (exn-message e) (current-error-port)))])
       (declaration)))
   (define statements
     (if (is-at-end?)
         null
         (for/list ([decl (in-producer protected-declaration)]
-                   #:final (is-at-end?)
-                   #:when (lambda (el) (not (null? el))))
+                   #:final (is-at-end?))
           decl)))
-  (when _hadError
+  (when had-error?
     (exit 65))
   statements)
 (provide parse)
