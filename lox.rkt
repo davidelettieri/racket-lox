@@ -1,9 +1,8 @@
 #lang racket
 
-(require racket/syntax
+(require "lang/helpers.rkt"
          racket/stxparam)
 (require (for-syntax racket/base
-                     racket/syntax
                      syntax/parse
                      racket/set))
 
@@ -137,11 +136,7 @@
 
 (define-syntax (lox-while stx)
   (syntax-parse stx
-    [(_ cond:expr body:expr ...)
-     #'(let loop ()
-         (when (lox-truthy? cond)
-           body ...
-           (loop)))]))
+    [(_ cond:expr body:expr ...) #'(while (lox-truthy? cond) body ...)]))
 
 (define (lox-add-impl left right line)
   (cond
@@ -149,16 +144,16 @@
     [(and (string? left) (string? right)) (string-append left right)]
     [else (lox-runtime-error "Operands must be two numbers or two strings." line)]))
 
+(define (lox-number-binop op av bv line)
+  (if (and (number? av) (number? bv))
+      (op av bv)
+      (lox-runtime-error "Operands must be numbers." line)))
+
 (define-syntax-rule (lox-binary-number-op name op)
   (define-syntax (name stx)
     (with-syntax ([line (syntax-line stx)])
       (syntax-case stx ()
-        [(_ a b)
-         (syntax (let ([av a]
-                       [bv b])
-                   (if (and (number? av) (number? bv))
-                       (op av bv)
-                       (lox-runtime-error "Operands must be numbers." line))))]))))
+        [(_ a b) #'(lox-number-binop op a b line)]))))
 
 (define-syntax (lox-divide stx)
   (with-syntax ([line (syntax-line stx)])
