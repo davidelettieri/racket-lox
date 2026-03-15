@@ -1,9 +1,8 @@
 #lang racket
 
-(require racket/syntax
+(require "lang/helpers.rkt"
          racket/stxparam)
 (require (for-syntax racket/base
-                     racket/syntax
                      syntax/parse
                      racket/set))
 
@@ -26,64 +25,36 @@
 (define lox-nil 'nil)
 
 (define-syntax (lox-unary stx)
-  (syntax-parse stx
-    #:datum-literals (BANG MINUS)
-    [(_ BANG v:expr) #'(not (lox-truthy? v))]
-    [(_ MINUS v:expr)
-     (syntax/loc stx
-       (lox-negate v))]))
-
-(define-syntax (lox-negate stx)
   (with-syntax ([line (syntax-line stx)])
-    (syntax-case stx ()
-      [(_ a) (syntax (lox-negate-impl a line))])))
+    (syntax-parse stx
+      #:datum-literals (BANG MINUS)
+      [(_ BANG v:expr) #'(not (lox-truthy? v))]
+      [(_ MINUS v:expr) #'(lox-negate-impl v line)])))
+
 (define (lox-negate-impl a line)
-  (if (number? a)
-      (if (zero? a)
-          (if (and (real? a) (negative? a)) 0.0 -0.0)
-          (- a))
-      (lox-runtime-error "Operand must be a number." line)))
+  (cond
+    [(not (number? a)) (lox-runtime-error "Operand must be a number." line)]
+    [(zero? a) (if (and (real? a) (negative? a)) 0.0 -0.0)]
+    [else (- a)]))
 
 (define-syntax (lox-binary stx)
-  (syntax-parse stx
-    #:datum-literals
-    (PLUS MINUS GREATER GREATER_EQUAL LESS LESS_EQUAL SLASH STAR BANG_EQUAL EQUAL_EQUAL AND OR)
-    [(_ left:expr PLUS right:expr)
-     (syntax/loc stx
-       (lox-add left right))]
-    [(_ left:expr MINUS right:expr)
-     (syntax/loc stx
-       (lox-subtract left right))]
-    [(_ left:expr GREATER right:expr)
-     (syntax/loc stx
-       (lox-greater left right))]
-    [(_ left:expr GREATER_EQUAL right:expr)
-     (syntax/loc stx
-       (lox-greater-equal left right))]
-    [(_ left:expr LESS right:expr)
-     (syntax/loc stx
-       (lox-less left right))]
-    [(_ left:expr LESS_EQUAL right:expr)
-     (syntax/loc stx
-       (lox-less-equal left right))]
-    [(_ left:expr SLASH right:expr)
-     (syntax/loc stx
-       (lox-divide left right))]
-    [(_ left:expr STAR right:expr)
-     (syntax/loc stx
-       (lox-multiply left right))]
-    [(_ left:expr BANG_EQUAL right:expr)
-     (syntax/loc stx
-       (not (lox-eqv? left right)))]
-    [(_ left:expr EQUAL_EQUAL right:expr)
-     (syntax/loc stx
-       (lox-eqv? left right))]
-    [(_ left:expr AND right:expr)
-     (syntax/loc stx
-       (lox-and left right))]
-    [(_ left:expr OR right:expr)
-     (syntax/loc stx
-       (lox-or left right))]))
+  (with-syntax ([line (syntax-line stx)])
+    (syntax-parse stx
+      #:datum-literals
+      (PLUS MINUS GREATER GREATER_EQUAL LESS LESS_EQUAL SLASH STAR BANG_EQUAL EQUAL_EQUAL AND OR)
+      [(_ left:expr PLUS right:expr) #'(lox-add-impl left right line)]
+      [(_ left:expr MINUS right:expr) #'(lox-number-binary-with-validation - left right line)]
+      [(_ left:expr GREATER right:expr) #'(lox-number-binary-with-validation > left right line)]
+      [(_ left:expr GREATER_EQUAL right:expr)
+       #'(lox-number-binary-with-validation >= left right line)]
+      [(_ left:expr LESS right:expr) #'(lox-number-binary-with-validation < left right line)]
+      [(_ left:expr LESS_EQUAL right:expr) #'(lox-number-binary-with-validation <= left right line)]
+      [(_ left:expr SLASH right:expr) #'(lox-divide-impl left right line)]
+      [(_ left:expr STAR right:expr) #'(lox-number-binary-with-validation * left right line)]
+      [(_ left:expr BANG_EQUAL right:expr) #'(not (lox-eqv? left right))]
+      [(_ left:expr EQUAL_EQUAL right:expr) #'(lox-eqv? left right)]
+      [(_ left:expr AND right:expr) #'(lox-and left right)]
+      [(_ left:expr OR right:expr) #'(lox-or left right)])))
 
 (define (lox-truthy? v)
   (not (or (eq? v #f) (eq? v lox-nil))))
@@ -130,18 +101,9 @@
      #'(define (name arg ...)
          (lox-run-callable-body () stmt ...))]))
 
-(define-syntax (lox-add stx)
-  (with-syntax ([line (syntax-line stx)])
-    (syntax-case stx ()
-      [(_ a b) (syntax (lox-add-impl a b line))])))
-
 (define-syntax (lox-while stx)
   (syntax-parse stx
-    [(_ cond:expr body:expr ...)
-     #'(let loop ()
-         (when (lox-truthy? cond)
-           body ...
-           (loop)))]))
+    [(_ cond:expr body:expr ...) #'(while (lox-truthy? cond) body ...)]))
 
 (define (lox-add-impl left right line)
   (cond
@@ -149,33 +111,15 @@
     [(and (string? left) (string? right)) (string-append left right)]
     [else (lox-runtime-error "Operands must be two numbers or two strings." line)]))
 
-(define-syntax-rule (lox-binary-number-op name op)
-  (define-syntax (name stx)
-    (with-syntax ([line (syntax-line stx)])
-      (syntax-case stx ()
-        [(_ a b)
-         (syntax (let ([av a]
-                       [bv b])
-                   (if (and (number? av) (number? bv))
-                       (op av bv)
-                       (lox-runtime-error "Operands must be numbers." line))))]))))
+(define (lox-number-binary-with-validation op av bv line)
+  (if (and (number? av) (number? bv))
+      (op av bv)
+      (lox-runtime-error "Operands must be numbers." line)))
 
-(define-syntax (lox-divide stx)
-  (with-syntax ([line (syntax-line stx)])
-    (syntax-case stx ()
-      [(_ a b)
-       (syntax (let ([av a]
-                     [bv b])
-                 (if (and (number? av) (number? bv))
-                     (/ (exact->inexact av) (exact->inexact bv))
-                     (lox-runtime-error "Operands must be numbers." line))))])))
-
-(lox-binary-number-op lox-multiply *)
-(lox-binary-number-op lox-subtract -)
-(lox-binary-number-op lox-less <)
-(lox-binary-number-op lox-less-equal <=)
-(lox-binary-number-op lox-greater >)
-(lox-binary-number-op lox-greater-equal >=)
+(define (lox-divide-impl av bv line)
+  (if (and (number? av) (number? bv))
+      (/ (exact->inexact av) (exact->inexact bv))
+      (lox-runtime-error "Operands must be numbers." line)))
 
 (define-syntax (lox-var-declaration stx)
   (syntax-parse stx
@@ -409,10 +353,6 @@
 (define-syntax-rule (lox-literal v)
   v)
 
-(define-syntax-rule (lox-declarations head ...)
-  (begin
-    head ...))
-
 (define-syntax (lox-top stx)
   (syntax-parse stx
     [(_ . id:id)
@@ -428,9 +368,7 @@
          lox-var-declaration
          lox-assign
          lox-print
-         lox-add
          lox-block
-         lox-declarations
          lox-class
          lox-literal
          lox-variable

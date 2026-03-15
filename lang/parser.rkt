@@ -1,8 +1,8 @@
 #lang racket
 
 (require "helpers.rkt"
-         "scanner.rkt")
-(require syntax/parse)
+         "scanner.rkt"
+         syntax/parse)
 
 (struct exn:fail:lox exn:fail (line) #:transparent)
 
