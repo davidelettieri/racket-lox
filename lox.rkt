@@ -353,10 +353,6 @@
 (define-syntax-rule (lox-literal v)
   v)
 
-(define-syntax-rule (lox-declarations head ...)
-  (begin
-    head ...))
-
 (define-syntax (lox-top stx)
   (syntax-parse stx
     [(_ . id:id)
@@ -373,7 +369,6 @@
          lox-assign
          lox-print
          lox-block
-         lox-declarations
          lox-class
          lox-literal
          lox-variable
