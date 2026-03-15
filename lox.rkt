@@ -25,24 +25,17 @@
 (define lox-nil 'nil)
 
 (define-syntax (lox-unary stx)
-  (syntax-parse stx
-    #:datum-literals (BANG MINUS)
-    [(_ BANG v:expr) #'(not (lox-truthy? v))]
-    [(_ MINUS v:expr)
-     (syntax/loc stx
-       (lox-negate v))]))
-
-(define-syntax (lox-negate stx)
   (with-syntax ([line (syntax-line stx)])
-    (syntax-case stx ()
-      [(_ a) (syntax (lox-negate-impl a line))])))
+    (syntax-parse stx
+      #:datum-literals (BANG MINUS)
+      [(_ BANG v:expr) #'(not (lox-truthy? v))]
+      [(_ MINUS v:expr) #'(lox-negate-impl v line)])))
 
 (define (lox-negate-impl a line)
-  (if (number? a)
-      (if (zero? a)
-          (if (and (real? a) (negative? a)) 0.0 -0.0)
-          (- a))
-      (lox-runtime-error "Operand must be a number." line)))
+  (cond
+    [(not (number? a)) (lox-runtime-error "Operand must be a number." line)]
+    [(zero? a) (if (and (real? a) (negative? a)) 0.0 -0.0)]
+    [else (- a)]))
 
 (define-syntax (lox-binary stx)
   (with-syntax ([line (syntax-line stx)])
