@@ -234,11 +234,11 @@
     [else (lox-runtime-error "Only instances have fields." line)]))
 
 (define (make-lox-class-constructor class-name-str superclass-value method-table)
-  (letrec ([klass (lox-class-constructor
+  (letrec ([class (lox-class-constructor
                    (lambda ctor-args
                      (define fields (make-hash))
-                     (define self (lox-class-instance klass fields))
-                     (define maybe-init (lox-class-bind-method klass 'init self))
+                     (define self (lox-class-instance class fields))
+                     (define maybe-init (lox-class-bind-method class 'init self))
                      (when maybe-init
                        (lox-call-impl maybe-init ctor-args (current-call-line)))
                      (when (and (not maybe-init) (not (null? ctor-args)))
@@ -249,7 +249,7 @@
                    class-name-str
                    method-table
                    superclass-value)])
-    klass))
+    class))
 
 (define (lox-validate-superclass superclass-value line)
   (when (and superclass-value (not (lox-class-constructor? superclass-value)))
