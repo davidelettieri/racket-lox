@@ -164,7 +164,7 @@
 
 (define (lox-call-impl f args line)
   (define param-count (length args))
-  (if (and (procedure? f) (not (lox-class-instance? f)))
+  (if (and (procedure? f))
       (if (or (lox-class-constructor? f) (procedure-arity-includes? f param-count))
           (parameterize ([current-call-line line])
             (apply f args))
@@ -194,15 +194,15 @@
 (define (lox-method-table-ref method-table prop)
   (hash-ref method-table prop #f))
 
-(define (lox-class-find-method-factory klass prop)
+(define (lox-class-find-method-factory class prop)
   (cond
-    [(not klass) #f]
+    [(not class) #f]
     [else
-     (or (lox-method-table-ref (lox-class-constructor-method-table klass) prop)
-         (lox-class-find-method-factory (lox-class-constructor-superclass klass) prop))]))
+     (or (lox-method-table-ref (lox-class-constructor-method-table class) prop)
+         (lox-class-find-method-factory (lox-class-constructor-superclass class) prop))]))
 
-(define (lox-class-bind-method klass prop receiver)
-  (define maybe-factory (lox-class-find-method-factory klass prop))
+(define (lox-class-bind-method class prop receiver)
+  (define maybe-factory (lox-class-find-method-factory class prop))
   (and maybe-factory (maybe-factory receiver)))
 
 (define (lox-super-impl superclass receiver method-sym line)
