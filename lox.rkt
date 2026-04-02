@@ -255,22 +255,19 @@
   (when (and superclass-value (not (lox-class-constructor? superclass-value)))
     (lox-runtime-error "Superclass must be a class." line)))
 
-(define-syntax-rule (lox-make-bound-method m-name receiver superclass-value (m-arg ...) m-body ...)
-  (procedure-rename (lambda (m-arg ...)
-                      (let ([this receiver]
-                            [super superclass-value])
-                        (define result
-                          (lox-run-callable-body ((this-param (make-rename-transformer #'this))
-                                                  (super-param (make-rename-transformer #'super)))
-                                                 m-body ...))
-                        (if (eq? 'm-name 'init) this result)))
-                    'm-name))
-
-(define-syntax-rule (lox-make-method-factory m-name superclass-value (m-arg ...) m-body ...)
-  (lambda (receiver) (lox-make-bound-method m-name receiver superclass-value (m-arg ...) m-body ...)))
-
 (define-syntax-rule (lox-make-method-entry m-name superclass-value (m-arg ...) m-body ...)
-  (cons 'm-name (lox-make-method-factory m-name superclass-value (m-arg ...) m-body ...)))
+  (cons 'm-name
+        (lambda (receiver)
+          (procedure-rename
+           (lambda (m-arg ...)
+             (let ([this receiver]
+                   [super superclass-value])
+               (define result
+                 (lox-run-callable-body ((this-param (make-rename-transformer #'this))
+                                         (super-param (make-rename-transformer #'super)))
+                                        m-body ...))
+               (if (eq? 'm-name 'init) this result)))
+           'm-name))))
 
 (define-syntax (lox-class stx)
   (syntax-parse stx
