@@ -34,7 +34,7 @@
 (define (lox-negate-impl a line)
   (cond
     [(not (number? a)) (lox-runtime-error "Operand must be a number." line)]
-    [(zero? a) (if (and (real? a) (negative? a)) 0.0 -0.0)]
+    [(zero? a) (if (eqv? a -0.0) 0.0 -0.0)]
     [else (- a)]))
 
 (define-syntax (lox-binary stx)
@@ -164,7 +164,7 @@
 
 (define (lox-call-impl f args line)
   (define param-count (length args))
-  (if (and (procedure? f))
+  (if (procedure? f)
       (if (or (lox-class-constructor? f) (procedure-arity-includes? f param-count))
           (parameterize ([current-call-line line])
             (apply f args))
