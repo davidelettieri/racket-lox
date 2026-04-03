@@ -25,11 +25,15 @@
 (define lox-nil 'nil)
 
 (define-syntax (lox-unary stx)
-  (with-syntax ([line (syntax-line stx)])
+  (with-syntax ([line (or (syntax-line stx) 0)])
     (syntax-parse stx
       #:datum-literals (BANG MINUS)
-      [(_ BANG v:expr) #'(not (lox-truthy? v))]
-      [(_ MINUS v:expr) #'(lox-negate-impl v line)])))
+      [(_ BANG v:expr)
+       (syntax/loc stx
+         (not (lox-truthy? v)))]
+      [(_ MINUS v:expr)
+       (syntax/loc stx
+         (lox-negate-impl v line))])))
 
 (define (lox-negate-impl a line)
   (cond
