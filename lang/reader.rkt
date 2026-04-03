@@ -1,7 +1,6 @@
 #lang racket/base
 
-(require (only-in racket/base eof-object?)
-         "scanner.rkt"
+(require "scanner.rkt"
          "parser.rkt")
 
 (define (read in)
