@@ -27,8 +27,7 @@
      (define raw-forms (unwrap-forms #'(form ...)))
      (resolve-statements raw-forms)
      (with-syntax ([(fixed-forms ...) (resolve-redefinitions raw-forms)])
-       #'(#%plain-module-begin ;; use module-begin to have expressions printed out
-          fixed-forms ...))]))
+       #'(#%plain-module-begin fixed-forms ...))]))
 
 (define (clock)
   (current-inexact-milliseconds))

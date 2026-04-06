@@ -191,14 +191,11 @@
   (struct-field-index base))
 (struct lox-class-instance (class fields))
 
-(define (lox-method-table-ref method-table prop)
-  (hash-ref method-table prop #f))
-
 (define (lox-class-find-method-factory class prop)
   (cond
     [(not class) #f]
     [else
-     (or (lox-method-table-ref (lox-class-constructor-method-table class) prop)
+     (or (hash-ref (lox-class-constructor-method-table class) prop #f)
          (lox-class-find-method-factory (lox-class-constructor-superclass class) prop))]))
 
 (define (lox-class-bind-method class prop receiver)
@@ -213,17 +210,17 @@
             (lox-runtime-error (format "Undefined property '~a'." method-sym) line)))
       (lox-runtime-error "Superclass must be a class." line)))
 
-(define (lox-get-impl o method-sym line)
+(define (lox-get-impl o symbol-name line)
   (cond
     [(lox-class-instance? o)
      (hash-ref (lox-class-instance-fields o)
-               method-sym
+               symbol-name
                (lambda ()
                  (define maybe-method
-                   (lox-class-bind-method (lox-class-instance-class o) method-sym o))
+                   (lox-class-bind-method (lox-class-instance-class o) symbol-name o))
                  (if maybe-method
                      maybe-method
-                     (lox-runtime-error (format "Undefined property '~a'." method-sym) line))))]
+                     (lox-runtime-error (format "Undefined property '~a'." symbol-name) line))))]
     [else (lox-runtime-error "Only instances have properties." line)]))
 
 (define (lox-set-impl o method-sym value line)
