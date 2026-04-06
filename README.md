@@ -26,3 +26,5 @@ Sample code
 
 print "Hello world!";
 ```
+
+Related blog post: https://davidelettieri.it/2026/03/13/lox-as-a-racket-language-module 
